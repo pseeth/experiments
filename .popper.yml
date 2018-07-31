@@ -16,10 +16,6 @@ pipelines:
     - host
     path: pipelines/prepare-data
     stages:
-    - setup
-    - run
-    - post-run
-    - validate
-    - teardown
+    - prepare-musdb
 popperized:
 - github/popperized
