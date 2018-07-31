@@ -4,7 +4,7 @@ metadata:
   publication_type: article
   upload_type: publication
 pipelines:
-  docker-data-science:
+  create-environment:
     envs:
     - host
     path: pipelines/create-environment
