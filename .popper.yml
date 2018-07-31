@@ -1,0 +1,8 @@
+metadata:
+  access_right: open
+  license: CC-BY-4.0
+  publication_type: article
+  upload_type: publication
+pipelines: {}
+popperized:
+- github/popperized
