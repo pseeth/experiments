@@ -17,5 +17,6 @@ pipelines:
     path: pipelines/prepare-data
     stages:
     - prepare-musdb
+    - generate-dataset
 popperized:
 - github/popperized

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# [wf] execute generate-figures stage
+# [wf] launch tensorboard, jupyter
 TENSORBOARD_HOST_PORT=6006
 JUPYTER_HOST_PORT=8888
 
@@ -11,7 +11,7 @@ docker run --workdir=/pipeline -v `pwd`/..:/pipeline \
     --name tensorboard \
   thesis --logdir .
 
-docker run --workdir=/pipeline -v `pwd`/..:/pipeline \
+docker run --workdir=/pipeline -v `pwd`/../..:/pipeline \
     -p 127.0.0.1:$JUPYTER_HOST_PORT:8888 -d \
     --entrypoint jupyter \
     --name jupyter \

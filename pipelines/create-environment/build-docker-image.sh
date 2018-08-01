@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# [wf] execute setup.sh stage
+# [wf] build docker image
 set -ex
 
 docker --version
