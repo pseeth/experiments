@@ -6,10 +6,10 @@ num_run=$(ls runs/ | wc -l |  tr -d ' ')
 run_id="run$num_run"
 model_path="/experiment/pipelines/rnn-music-baseline/runs/$run_id"
 
-mkdir -p $model_path
-cp train.sh ${model_path}/${run_id}_train.sh
+mkdir -p runs/$run_id
+cp train.sh runs/${run_id}_train.sh
 git commit -am "commiting changes before $run_id"
-git rev-parse HEAD > ${model_path}/commit_hash
+git rev-parse HEAD > runs/${run_id}/commit_hash
 
 docker run --rm --workdir=/experiment -v `pwd`/../..:/experiment \
   --name rnn-music-baseline \
