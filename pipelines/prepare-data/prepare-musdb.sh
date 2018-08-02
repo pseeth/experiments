@@ -19,7 +19,3 @@ if [ ! -d data/musdb ]; then
     --user $UID \
   thesis scripts/organize_musdb.py
 fi
-
-if [ ! -d ../../data ]; then
-    mv `pwd`/data `pwd`/../..
-fi

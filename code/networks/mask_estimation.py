@@ -104,4 +104,4 @@ class MaskEstimation(nn.Module):
         if self.use_projection:
             masks = self.invert_projection(masks)
             masks = masks.clamp(0.0, 1.0)
-        return masks, None, None
+        return masks, None, None, None

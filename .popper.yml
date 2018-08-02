@@ -18,6 +18,7 @@ pipelines:
     stages:
     - prepare-musdb
     - generate-dataset
+    - move-dataset
   rnn-music-baseline:
     envs:
     - host

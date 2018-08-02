@@ -17,8 +17,3 @@ docker run --rm --workdir=/pipeline -v `pwd`/../..:/pipeline \
     --entrypoint jupyter \
     --name jupyter \
   thesis lab --ip=0.0.0.0 --allow-root
-
-docker run --rm --workdir=/experiment -v `pwd`/../..:/experiment \
-    --entrypoint /bin/bash \
-    --name bash \
-  thesis

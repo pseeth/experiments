@@ -22,7 +22,7 @@ torch.manual_seed(0)
 warnings.simplefilter(action='ignore', category=FutureWarning)
 tqdm.monitor_interval = 0
 
-print(os.listdir('/experiment/pipelines/prepare-data/data'))
+print(os.listdir('/experiment/data'))
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_name", default='model')
@@ -323,9 +323,9 @@ for epoch in epochs:
                 writer.add_scalar('attr_loss/scalar', attractor_loss.item(), n_iter)
                 loss += params['attractor_alpha']*attractor_loss
         
-        writer.add_scalar('variance/scalar', 1/attractors[1].mean().item(), n_iter)
-        writer.add_scalar('log_likelihood/scalar', log_likelihoods.mean().item(), n_iter)
-        writer.add_scalar('embedding/scalar', embedding.norm(p=2).item(), n_iter)
+            writer.add_scalar('variance/scalar', 1/attractors[1].mean().item(), n_iter)
+            writer.add_scalar('log_likelihood/scalar', log_likelihoods.mean().item(), n_iter)
+            writer.add_scalar('embedding/scalar', embedding.norm(p=2).item(), n_iter)
 
         if np.isnan(loss.item()):
             print('Loss went to nan - deleting existing directory: ', args.log_dir)
