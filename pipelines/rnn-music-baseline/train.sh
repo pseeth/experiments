@@ -3,7 +3,7 @@
 
 mkdir -p runs
 num_run=$(ls runs/ | wc -l |  tr -d ' ')
-run_id="runs$num_runs"
+run_id="run$num_run"
 model_path="/experiment/pipelines/rnn-music-baseline/runs/$run_id"
 
 mkdir -p $model_path
