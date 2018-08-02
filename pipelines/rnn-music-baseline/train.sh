@@ -2,16 +2,17 @@
 # [wf] execute train stage
 
 mkdir -p runs
-num_runs=$(ls runs/ | wc -l |  tr -d ' ')
-run_id="run$num_runs"
+num_run=$(ls runs/ | wc -l |  tr -d ' ')
+run_id="runs$num_runs"
 model_path="/experiment/pipelines/rnn-music-baseline/runs/$run_id"
 
 mkdir -p model_path
+ls runs
+ls
+
 cp train.sh ${model_path}/${run_id}_train.sh
 git commit -am "commiting changes before $run_id"
 git rev-parse HEAD > ${model_path}/commit_hash
-echo $model_path > 'model_directory'
-errror out here
 
 docker run --rm --workdir=/experiment -v `pwd`/../..:/experiment \
   --name rnn-music-baseline \
