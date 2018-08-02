@@ -21,3 +21,6 @@ This pipeline prepares all the data used in the experiments. For musdb experimen
     popper run rnn-music-baseline
     
 This pipeline trains a baseline model using a 4 layer BLSTM that outputs source masks directly. It's trained with L1 error between the estimated source spectrograms and the ground truth source spectrograms. Spectrograms are projected down to 300 mel filters before being passed into the BLSTM stack. The script parallelizes training across all available GPUs.
+
+### Viewing logs
+To easily view logs, you can use the logs.sh script that is in the pipelines folder. It runs "tail -f" on every available log file, with the most recently modified at the bottom.
