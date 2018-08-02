@@ -2,7 +2,7 @@
 # [wf] execute train stage
 
 mkdir -p runs
-num_runs=$(ls runs/ | wc -l)
+num_runs=$(ls runs/ | wc -l |  tr -d ' ')
 run_id="run{$num_runs}"
 model_path="/experiment/pipelines/rnn-music-baseline/runs/{$run_id}/"
 cp ./train.sh ${model_path}/${run_id}_train.sh
