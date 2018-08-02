@@ -16,7 +16,7 @@ This pipeline builds a Docker image that is used for all the experiments. It als
 
     popper run prepare-data
    
-This pipeline prepares all the data used in the experiments. For musdb experiments, it expects the musdb dataset (encoded as .mp4 into a zip file, as downloaded directly from [musdb](https://sigsep.github.io/datasets/musdb.html)) at data/raw/musdb18.zip inside the prepare-data pipeline directory. It then generates all the training data.
+This pipeline prepares all the data used in the experiments. For musdb experiments, it expects the musdb dataset (encoded as .mp4 into a zip file, as downloaded directly from [musdb](https://sigsep.github.io/datasets/musdb.html)) at ./pipelines/prepare-data/data/raw/musdb18.zip (. being the top-level directory of this repo) It then generates all the training data and places it into ./pipelines/prepare-data/data/generated/musdb. Then the data is moved to the top-level directory at ./data so it is accessible by the training scripts.
 
     popper run rnn-music-baseline
     
