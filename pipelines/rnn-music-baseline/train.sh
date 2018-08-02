@@ -7,7 +7,7 @@ run_id="run$num_run"
 model_path="/experiment/pipelines/rnn-music-baseline/runs/$run_id"
 
 mkdir -p runs/$run_id
-cp train.sh runs/${run_id}_train.sh
+cp train.sh runs/${run_id}/${run_id}_train.sh
 git commit -am "commiting changes before $run_id"
 git rev-parse HEAD > runs/${run_id}/commit_hash
 
