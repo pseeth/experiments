@@ -81,4 +81,4 @@ def show_model(model):
 def save_checkpoint(state, is_best, filename):
     torch.save(state, filename)
     if is_best:
-        shutil.copyfile(filename, filename[:-2] + '_best.h5')
+        shutil.copyfile(filename, filename[:-3] + '_best.h5')

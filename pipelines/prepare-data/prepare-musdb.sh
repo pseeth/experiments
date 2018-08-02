@@ -5,8 +5,8 @@ mkdir -p data
 mkdir -p data/raw
 if [ ! -d data/raw/musdb ]; then
     mkdir -p data/raw/musdb
-    #unzip data/raw/musdb18.zip -d data/raw/musdb
-    tar xvf data/raw/musdb18.zip -C data/raw/musdb
+    unzip data/raw/musdb18.zip -d data/raw/musdb
+    #tar xvf data/raw/musdb18.zip -C data/raw/musdb
     docker pull faroit/sigsep-mus-io
     docker run --rm -v `pwd`/data/raw/musdb:/data faroit/sigsep-mus-io /scripts/decode.sh
     docker rmi faroit/sigsep-mus-io
