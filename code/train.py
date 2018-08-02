@@ -128,7 +128,7 @@ if torch.cuda.is_available():
 else:
     device = torch.device('cpu')
 
-if os.path.isdir(args.log_dir):
+if os.path.isdir(os.path.join(args.log_dir, 'checkpoints')):
     if args.overwrite:
         print('Deleting existing directory: ', args.log_dir)
         subprocess.call(['rm','-rf', args.log_dir])
