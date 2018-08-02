@@ -1,4 +1,4 @@
-# Experiments with conditional centroids, deep clustering, and more (to come)!
+## Experiments with conditional centroids, deep clustering, and more (to come)!
 
 This project uses [Popper](https://github.com/systemslab/popper), a convention and CLI tool for generating reproducible papers. Install Popper with:
 
