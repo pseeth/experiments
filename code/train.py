@@ -49,6 +49,7 @@ parser.add_argument("--embedding_size", default=40)
 parser.add_argument("--learning_rate", default=1e-3)
 parser.add_argument("--batch_size", default=40)
 parser.add_argument("--initial_length", default=1.0)
+parser.add_argument("--curriculum_learning", action='store_true')
 parser.add_argument("--num_epochs", default=75)
 parser.add_argument("--optimizer", default='adam')
 parser.add_argument("--group_sources", default='')
@@ -119,7 +120,8 @@ params = {
     'clustering_type': args.clustering_type,
     'covariance_type': args.covariance_type,
     'num_gaussians_per_source': int(args.num_gaussians_per_source),
-    'use_likelihoods': args.use_likelihoods
+    'use_likelihoods': args.use_likelihoods,
+    'curriculum_learning': args.curriculum_learning
 }
 
 device = None
@@ -292,10 +294,11 @@ for epoch in epochs:
         if (epoch % int(params['num_epochs'] / 5) == 0) and (epoch > int(params['num_epochs'] / 5)):
             module.clusterer.n_iterations -= 1
             module.clusterer.n_iterations = max(0, module.clusterer.n_iterations)
-    if epoch == int(params['num_epochs'] / 5):
-        # Lengthen sequences for learning
-        dataset.length = 1.0
-        val_dataset.length = 1.0
+    if args.curriculum_learning:
+        if epoch == int(params['num_epochs'] / 5):
+            # Lengthen sequences for learning
+            dataset.length = 1.0
+            val_dataset.length = 1.0
                 
     progress_bar = trange(num_iterations)
     epoch_loss = []
