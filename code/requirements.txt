@@ -1,0 +1,13 @@
+jams>=0.2.2
+musdb>=0.2.3
+museval>=0.2.0
+numpy>=1.12.1
+pandas>=0.19.2
+resampy>=0.2.0
+scipy>=1.0.0
+sklearn>=0.0
+tensorboardX>=1.1
+tensorflow-tensorboard>=0.4.0rc3
+torch>=0.4.0
+torchvision>=0.2.1
+tqdm==4.19.9

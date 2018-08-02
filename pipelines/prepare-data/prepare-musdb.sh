@@ -1,21 +1,25 @@
 #!/usr/bin/env bash
 # [wf] execute setup stage
 
-mkdir -p raw
-if [ ! -d raw/musdb ]; then
-    mkdir -p raw/musdb
-    unzip raw/musdb18.zip -d raw/musdb/
+mkdir -p data
+mkdir -p data/raw
+if [ ! -d data/raw/musdb ]; then
+    mkdir -p data/raw/musdb
+    #unzip data/raw/musdb18.zip -d data/raw/musdb
+    tar xvf data/raw/musdb18.zip -C data/raw/musdb
     docker pull faroit/sigsep-mus-io
-    docker run --rm -v `pwd`/raw/musdb:/data faroit/sigsep-mus-io /scripts/decode.sh
+    docker run --rm -v `pwd`/data/raw/musdb:/data faroit/sigsep-mus-io /scripts/decode.sh
+    docker rmi faroit/sigsep-mus-io
 fi
 
-mkdir -p data
+rm data/raw/musdb/train/*.mp4 data/raw/musdb/test/*.mp4
+
 if [ ! -d data/musdb ]; then
-    docker run --workdir=/pipeline -v `pwd`:/pipeline \
-    -e USERID=$UID \
+    docker run --rm --workdir=/pipeline -v `pwd`:/pipeline \
+    --user $UID \
   thesis scripts/organize_musdb.py
 fi
 
 if [ ! -d ../../data ]; then
-    ln -s `pwd`/data `pwd`/../..
+    mv `pwd`/data `pwd`/../..
 fi

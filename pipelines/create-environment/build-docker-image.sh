@@ -9,3 +9,5 @@ if [ $? -ne 0 ]; then
 fi
 
 docker build -t thesis docker/
+
+#nvidia-docker run --rm -t --entrypoint nvidia-smi thesis

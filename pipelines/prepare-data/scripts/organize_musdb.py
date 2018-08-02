@@ -1,5 +1,4 @@
 import os
-import shutil
 from random import shuffle
 import random
 import sox
@@ -26,12 +25,11 @@ def copy_sources(song_paths, split):
             source_file = os.path.join(song_path, source + '.wav')
             destination_file = os.path.join('data', 'musdb', split, source, song_name + '.wav')
             print('Copying %s to %s' % (source_file, destination_file))
-            #shutil.copy(source_file, destination_file)
             tfm.build(source_file, destination_file)
 
 
 for split in splits:
-    source_path = os.path.join('raw', 'musdb', 'train' if split == 'validation' else split)
+    source_path = os.path.join('data', 'raw', 'musdb', 'train' if split == 'validation' else split)
     song_names = [os.path.join(source_path, x) for x in os.listdir(source_path) if '.mp4' not in x]
     if split == 'train':
         shuffle(song_names)

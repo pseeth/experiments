@@ -1,12 +1,7 @@
 import scaper
 import os
-import sox
-import numpy as np
 import logging
-from tqdm import tqdm
 import warnings
-import jams
-import librosa
 from utils import parallel_process, check_sources_not_equal_to_mix
 import traceback
 
@@ -59,11 +54,11 @@ def create_mixture(i, scene_duration, max_sources, foreground_directory, backgro
             pass
 
 
-base_directory = 'data/generated'
+base_directory = 'data/generated/musdb'
 os.makedirs(base_directory, exist_ok=True)
 
-num_training = 20000
-num_validation = 2000
+num_training = 200
+num_validation = 20
 num_testing = 0
 n_jobs = 12
 splits = [('train', num_training),

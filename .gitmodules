@@ -1,0 +1,3 @@
+[submodule "code/conditional_attractors"]
+	path = code/conditional_attractors
+	url = git@github.com:pseeth/conditional_attractors.git

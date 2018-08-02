@@ -1,5 +1,26 @@
 # Use an official Python runtime as a parent image
-FROM continuumio/anaconda3
+FROM nvidia/cuda
+
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+ENV PATH /opt/conda/bin:$PATH
+
+RUN apt-get update --fix-missing && apt-get install -y wget bzip2 ca-certificates \
+    libglib2.0-0 libxext6 libsm6 libxrender1 \
+    git mercurial subversion
+
+RUN wget --quiet https://repo.anaconda.com/archive/Anaconda3-5.2.0-Linux-x86_64.sh -O ~/anaconda.sh && \
+    /bin/bash ~/anaconda.sh -b -p /opt/conda && \
+    rm ~/anaconda.sh && \
+    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
+    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
+    echo "conda activate base" >> ~/.bashrc
+
+RUN apt-get install -y curl grep sed dpkg && \
+    TINI_VERSION=`curl https://github.com/krallin/tini/releases/latest | grep -o "/v.*\"" | sed 's:^..\(.*\).$:\1:'` && \
+    curl -L "https://github.com/krallin/tini/releases/download/v${TINI_VERSION}/tini_${TINI_VERSION}.deb" > tini.deb && \
+    dpkg -i tini.deb && \
+    rm tini.deb && \
+    apt-get clean
 
 ENV JUPYTER_PASSWORD sha1:7c4613b10073:01d7dcef0bdae99ced22d7aebaa61d931f446b27
 # Obtain the SHA hash for your chosen password and copy it above. To do this, use:
@@ -16,7 +37,8 @@ RUN git clone https://github.com/pseeth/scaper && \
     cd scaper && \
     git checkout source_separation \
     && pip install -e .
-RUN conda install pytorch torchvision cuda92 -c pytorch
+RUN pip install -U git+https://github.com/pseeth/audio_embed.git
+RUN conda install pytorch torchvision -c pytorch
 RUN jupyter notebook --generate-config
 RUN echo "c.NotebookApp.password='${JUPYTER_PASSWORD}'" >> /root/.jupyter/jupyter_notebook_config.py
 RUN jupyter nbextension enable --py widgetsnbextension

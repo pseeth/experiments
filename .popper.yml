@@ -18,5 +18,13 @@ pipelines:
     stages:
     - prepare-musdb
     - generate-dataset
+  rnn-music-baseline:
+    envs:
+    - host
+    path: pipelines/rnn-music-baseline
+    stages:
+    - train
+    - separate
+    - evaluate
 popperized:
 - github/popperized

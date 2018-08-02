@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 docker stop -t 0 data_generation || true
-docker rm data_generation || true
+rm -rf data/generated
 
-docker run --workdir=/pipeline -v `pwd`:/pipeline \
+docker run --rm --workdir=/pipeline -v `pwd`:/pipeline \
   --name data_generation \
-  -e USERID=$UID \
+  --user $UID \
   thesis scripts/create_incoherent_music.py
