@@ -1,5 +1,6 @@
 popper_logs
 popper_status
 .ipynb_checkpoints
+.pyc
 data
 runs
