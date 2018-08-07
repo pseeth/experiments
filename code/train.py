@@ -22,8 +22,6 @@ torch.manual_seed(0)
 warnings.simplefilter(action='ignore', category=FutureWarning)
 tqdm.monitor_interval = 0
 
-print(os.listdir('/experiment/data'))
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_name", default='model')
 parser.add_argument("--log_dir", default=None)
@@ -124,11 +122,7 @@ params = {
     'curriculum_learning': args.curriculum_learning
 }
 
-device = None
-if torch.cuda.is_available():
-    device = torch.device('cuda')
-else:
-    device = torch.device('cpu')
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 if os.path.isdir(os.path.join(args.log_dir, 'checkpoints')):
     if args.overwrite:
@@ -239,17 +233,18 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=
 checkpoints = sorted(os.listdir(os.path.join(args.log_dir, 'checkpoints')))
 
 if args.resume and len(checkpoints) > 0:
-    checkpoint_path = os.path.join(args.log_dir, 'checkpoints', checkpoints[0])
+    checkpoint_path = os.path.join(args.log_dir, 'checkpoints/latest.h5')
     checkpoint = torch.load(checkpoint_path)
     if checkpoint['epoch'] == params['num_epochs']:
         raise ValueError("Run completed! Exiting.")
     else:
-        time_since_last_checkpoint = (time.time() - os.path.getmtime(checkpoint_path)) / 3600
-        if time_since_last_checkpoint < .5:
-            raise ValueError("Job is still running", args.log_dir)
-        model.load_state_dict(checkpoint['state_dict'], map_location=lambda storage, loc: storage)
+        #time_since_last_checkpoint = (time.time() - os.path.getmtime(checkpoint_path)) / 3600
+        #if time_since_last_checkpoint < .5:
+        #    raise ValueError("Job is still running", args.log_dir)
+        model.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
-        epochs = trange(len(checkpoints), params['num_epochs'])
+        move_optimizer(optimizer, device)
+        epochs = trange(checkpoint['epoch'], params['num_epochs'])
         n_iter = num_iterations*checkpoint['epoch']
         print("Resuming job: ", args.log_dir)
 else:
@@ -295,7 +290,7 @@ for epoch in epochs:
             module.clusterer.n_iterations -= 1
             module.clusterer.n_iterations = max(0, module.clusterer.n_iterations)
     if args.curriculum_learning:
-        if epoch == int(params['num_epochs'] / 5):
+        if epoch >= int(params['num_epochs'] / 5):
             # Lengthen sequences for learning
             dataset.length = 1.0
             val_dataset.length = 1.0

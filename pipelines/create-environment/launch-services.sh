@@ -16,4 +16,5 @@ docker run --rm --workdir=/pipeline -v `pwd`/../..:/pipeline \
     -p 127.0.0.1:$JUPYTER_HOST_PORT:8888 -d \
     --entrypoint jupyter \
     --name jupyter \
+    --ipc=host \
   thesis lab --ip=0.0.0.0

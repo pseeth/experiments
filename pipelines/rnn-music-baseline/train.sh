@@ -2,7 +2,7 @@
 # [wf] execute train stage
 
 mkdir -p runs
-num_run=$(ls runs/ | wc -l |  tr -d ' ')
+num_run=9 #$(ls runs/ | wc -l |  tr -d ' ')
 run_id="run$num_run"
 model_path="/experiment/pipelines/rnn-music-baseline/runs/$run_id"
 echo $model_path > model_path
@@ -39,8 +39,8 @@ docker run --rm --workdir=/experiment -v `pwd`/../..:/experiment \
     --source_labels vocals_drums_bass_other \
     --learning_rate 2e-4 \
     --projection_size 300 \
-    --num_workers 4 \
-    --overwrite \
+    --num_workers 10 \
+    --resume \
     --sample_strategy sequential \
     --baseline \
     --reorder_sources
