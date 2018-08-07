@@ -6,7 +6,7 @@ This project uses [Popper](https://github.com/systemslab/popper), a convention a
 
 You'll also need Docker. Install Docker following the instructions here: https://docs.docker.com/install/.
 
-For GPU usage, you need nvidia-docker: https://github.com/NVIDIA/nvidia-docker
+For GPU usage, you need nvidia-docker: https://github.com/nvidia/nvidia-docker/wiki/Installation-(version-2.0)
 
 Once those are installed, you can reproduce experiments with the following commands:
 
