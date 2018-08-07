@@ -182,7 +182,7 @@ if not args.baseline:
                          num_attractors=params['num_attractors'],
                          attractor_function_type=params['attractor_function_type'],
                          embedding_size=params['embedding_size'],
-                         num_clustering_iterations=params['num_clustering_iterations'],
+                         num_clustering_iterations=0 if args.unfold_iterations else params['num_clustering_iterations'],
                          projection_size=params['projection_size'],
                          activation_type=params['activation_type'],
                          threshold=params['threshold'],
@@ -286,9 +286,8 @@ val_losses = []
 
 for epoch in epochs:
     if args.unfold_iterations:
-        if (epoch % int(params['num_epochs'] / 5) == 0) and (epoch > int(params['num_epochs'] / 5)):
-            module.clusterer.n_iterations -= 1
-            module.clusterer.n_iterations = max(0, module.clusterer.n_iterations)
+        if (epoch % int(params['num_epochs'] / 5) == 0) and (epoch >= int(params['num_epochs'] / 5)):
+            module.clusterer.n_iterations = min(params['num_clustering_iterations'], module.clusterer.n_iterations + 1)
     if args.curriculum_learning:
         if epoch >= int(params['num_epochs'] / 5):
             # Lengthen sequences for learning
@@ -321,7 +320,7 @@ for epoch in epochs:
                 writer.add_scalar('attr_loss/scalar', attractor_loss.item(), n_iter)
                 loss += params['attractor_alpha']*attractor_loss
         
-            writer.add_scalar('variance/scalar', 1/attractors[1].mean().item(), n_iter)
+            writer.add_scalar('inv_variance/scalar', 1/attractors[1].mean().item(), n_iter)
             writer.add_scalar('log_likelihood/scalar', log_likelihoods.mean().item(), n_iter)
             writer.add_scalar('embedding/scalar', embedding.norm(p=2).item(), n_iter)
 

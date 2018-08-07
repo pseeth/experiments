@@ -81,8 +81,9 @@ class ScaperLoader(Dataset):
         
         shape = source_magnitudes.shape
         source_log_magnitudes = source_log_magnitudes.reshape(np.prod(shape[0:-1]), shape[-1])
-        source_argmax = np.argmax(source_log_magnitudes, axis=-1)
+
         source_ibm = np.zeros(source_log_magnitudes.shape)
+        source_argmax = np.argmax(source_log_magnitudes, axis=-1)
         source_ibm[np.arange(source_ibm.shape[0]), source_argmax] = 1.0
         
         source_ibm = source_ibm.reshape(shape)
@@ -169,9 +170,11 @@ class ScaperLoader(Dataset):
         log_spec = librosa.amplitude_to_db(np.abs(stft), ref=np.max)
         return log_spec, stft
 
-    def inspect(self, input_data, mix_magnitude, output_data, i, alpha=1.0):
+    def inspect(self, i):
         import matplotlib.pyplot as plt
         from audio_embed import utilities
+
+        input_data, mix_magnitude, output_data, _, _ = self[i]
 
         plt.style.use('dark_background')
         plt.figure(figsize=(20, 5))
@@ -195,7 +198,6 @@ class ScaperLoader(Dataset):
 
         for j in range(len(sources)):
             mask = (output_data[:, :, j] / (mix_magnitude + 1e-7)).T
-            mask = mask**alpha
             plt.figure(figsize=(20, 5))
             plt.subplot(121)
             plt.imshow(mask, aspect='auto', origin='lower')

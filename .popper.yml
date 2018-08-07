@@ -27,5 +27,13 @@ pipelines:
     - train
     - separate
     - evaluate
+  em-cluster-music:
+    envs:
+    - host
+    path: pipelines/em-cluster-music
+    stages:
+    - train
+    - separate
+    - evaluate
 popperized:
 - github/popperized
