@@ -14,7 +14,7 @@ Once those are installed, you can reproduce experiments with the following comma
   
 This pipeline builds a Docker image that is used for all the experiments. It also launches Tensorboard and a Jupyter server at localhost:6006 and localhost:8888, respectively.
 
-    popper run prepare-data
+    popper run prepare-music-data
    
 This pipeline prepares all the data used in the experiments. For musdb experiments, it expects the musdb dataset (encoded as .mp4 into a zip file, as downloaded directly from [musdb](https://sigsep.github.io/datasets/musdb.html)) at ./pipelines/prepare-data/data/raw/musdb18.zip (. being the top-level directory of this repo) It then generates all the training data and places it into ./pipelines/prepare-data/data/generated/musdb. Then the data is moved to the top-level directory at ./data so it is accessible by the training scripts.
 
