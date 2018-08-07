@@ -80,11 +80,8 @@ def validate(model, dset, writer, n_iter, params, device, loss_function, num_val
 
             source_masks = model(spectrogram, one_hots)[0]
 
-            if params['loss_function'] == 'cross_entropy':
-                loss = weighted_cross_entropy(loss_function, spectrogram.detach(), source_masks, source_ibms, threshold=params['threshold'])
-            else:
-                source_estimates = source_masks * magnitude_spectrogram
-                loss = loss_function(source_estimates, source_spectrograms)
+            source_estimates = source_masks * magnitude_spectrogram
+            loss = loss_function(source_estimates, source_spectrograms)
 
             progress_bar.set_description(str(loss.item()))
             progress_bar.update(1)

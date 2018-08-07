@@ -2,6 +2,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
 import librosa
 import jams
+import sys
 
 def parallel_process(array, function, n_jobs=4, use_kwargs=False, front_num=1):
     """

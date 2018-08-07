@@ -11,10 +11,10 @@ pipelines:
     stages:
     - build-docker-image
     - launch-services
-  prepare-data:
+  prepare-music-data:
     envs:
     - host
-    path: pipelines/prepare-data
+    path: pipelines/prepare-music-data
     stages:
     - prepare-musdb
     - generate-dataset

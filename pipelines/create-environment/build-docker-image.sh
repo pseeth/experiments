@@ -8,6 +8,9 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-docker build -t thesis docker/
+docker build \
+    --build-arg user_id=$UID \
+    --build-arg user_name=`whoami` \
+    -t thesis docker/
 
 #nvidia-docker run --rm -t --entrypoint nvidia-smi thesis

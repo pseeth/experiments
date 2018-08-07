@@ -9,6 +9,7 @@ import sox
 
 class ScaperLoader(Dataset):
     def __init__(self, folder, length = 1.0, n_fft=512, hop_length=128, sr=None, output_type='psa', group_sources=[], ignore_sources=[], source_labels=[]):
+        self.folder = folder
         self.jam_files = sorted([os.path.join(folder, x) for x in os.listdir(folder) if '.json' in x])
         self.n_fft = n_fft
         self.hop_length = hop_length
@@ -109,8 +110,10 @@ class ScaperLoader(Dataset):
         keep_columns = []
 
         for d in data:
-            if d['role'] == 'foreground':  
-                sources.append(librosa.load(d['saved_source_file'], sr=self.sr)[0])
+            if d['role'] == 'foreground':
+                source_path = d['saved_source_file']
+                source_path = os.path.join(self.folder, source_path.split('/')[-1])
+                sources.append(librosa.load(source_path, sr=self.sr)[0])
                 one_hot = np.zeros(len(classes))
                 one_hot[self.source_indices[d['label']]] = 1
                 used_classes.append(d['label'])

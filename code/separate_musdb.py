@@ -1,5 +1,4 @@
 import musdb
-import museval
 import os
 from networks import *
 import torch
@@ -13,15 +12,14 @@ from mwf import MWF
 parser = argparse.ArgumentParser()
 parser.add_argument("--run_directory")
 parser.add_argument("--track_id")
-parser.add_argument("--checkpoint", default=None)
+parser.add_argument("--estimate_dir")
+parser.add_argument("--base_directory")
+parser.add_argument("--musdb_directory")
 parser.add_argument("--multiple_models", action='store_true')
-parser.add_argument("--estimate_dir", default='musdb_estimates')
 parser.add_argument("--mwf", action='store_true')
-parser.add_argument("--base_directory", default='/mm1/seetharaman')
 args = parser.parse_args()
-alpha = 2
 
-mus = musdb.DB(root_dir='../data/raw/musdb/', is_wav=True)
+mus = musdb.DB(root_dir=args.musdb_directory, is_wav=True)
 run_directory = args.run_directory
 estimate_directory = os.path.join(args.base_directory, args.estimate_dir, run_directory.split('/')[-1])
 os.makedirs(estimate_directory, exist_ok=True)
@@ -29,25 +27,8 @@ os.makedirs(estimate_directory, exist_ok=True)
 def load_model(run_directory, device_target):
     if args.checkpoint is None:
         saved_model_path = os.path.join(run_directory, 'model.h5')
-    else:
-        saved_model_path = os.path.join(run_directory, 'checkpoints',  'model%03d.h5' % (int(args.checkpoint)))
     with open(os.path.join(run_directory, 'params.json'), 'r') as f:
         params = json.load(f)
-
-    device = torch.device(device_target)
-    if params['n_fft'] == 256:
-        params['sample_rate'] = 16000
-    else:
-        params['sample_rate'] = 44100
-        
-    if 'attractor_function_type' not in params:
-        params['attractor_function_type'] = 'ae'
-        
-    if 'thresh' not in run_directory and 'threshold' not in params:
-        params['threshold'] = None
-
-    if 'normalize_embeddings' not in params:
-        params['normalize_embeddings'] = 'norm' in run_directory
 
     device = torch.device(device_target)
     if 'baseline' not in run_directory:
@@ -67,7 +48,7 @@ def load_model(run_directory, device_target):
                        embedding_activation=params['embedding_activation'],
                        covariance_type=params['covariance_type'],
                        threshold=params['threshold'],
-                       use_likelihoods=False).to(device)
+                       use_likelihoods=params['use_likelihoods']).to(device)
     else:
         model = MaskEstimation(input_size=int(params['n_fft']/2 + 1),
                          sample_rate=params['sample_rate'],
@@ -79,7 +60,8 @@ def load_model(run_directory, device_target):
                          activation_type=params['activation_type']).to(device)
 
     model.eval()
-    model.load_state_dict(torch.load(saved_model_path, map_location=lambda storage, loc: storage))
+    checkpoint = torch.load(saved_model_path)
+    model.load_state_dict(checkpoint['state_dict'])
     return model, params, device
 
 def transform(data, n_fft, hop_length):
@@ -146,17 +128,26 @@ def separate(track):
             if masks.shape[-1] == 4:
                 if labels[i] == 'vocals':
                     estimates['accompaniment'][:, channel] = residual
-        #if 'other' in labels:
-        #    estimates['other'][:, channel] += residual
-        #estimates['accompaniment'][:, channel] += residual
+
     if args.mwf:
         estimates = {label: estimates[label] for label in labels[:-1]}
         estimates = MWF(track.audio, estimates)
         
     return estimates
 
-def evaluate(track, estimates_dir):
-    museval._load_track_estimates(track, estimates_dir, estimates_dir)
+def prep_model_to_device(device):
+    models = []
+    if args.multiple_models:
+        targets = ['drums', 'bass', 'other']
+        model, params, device = load_model(run_directory, device)
+        models.append(model)
+        for target in targets:
+            model, params, device = load_model(run_directory.replace('vocals', target), device)
+            models.append(model)
+        return models, params, device
+    else:
+        model, params, device = load_model(run_directory, device)
+        return model, params, device
 
 tracknames = []
 for _, folder, _ in os.walk(os.path.join(mus.root_dir, "test")):
@@ -174,23 +165,10 @@ if os.path.exists(track_estimate_directory):
 else:
     perform_separation = True
     
-def prep_model_to_device(device):
-    models = []
-    if args.multiple_models:
-        targets = ['drums', 'bass', 'other']
-        model, params, device = load_model(run_directory, device)
-        models.append(model)
-        for target in targets:
-            model, params, device = load_model(run_directory.replace('vocals', target), device)
-            models.append(model)
-        return models, params, device
-    else:
-        model, params, device = load_model(run_directory, device)
-        return model, params, device
-    
 if perform_separation:
+    device_target = 'cuda' if torch.cuda.is_available() else 'cpu'
     try:
-        model, params, device = prep_model_to_device('cuda')
+        model, params, device = prep_model_to_device(device_target)
         if args.multiple_models:
             models = model
         print("Separating with model %s" % run_directory)
@@ -202,4 +180,3 @@ if perform_separation:
             models = model
         print("CUDA failed! Using CPU. Separating with model %s" % run_directory)
         mus.run(separate, tracks=track, estimates_dir=estimate_directory)
-    

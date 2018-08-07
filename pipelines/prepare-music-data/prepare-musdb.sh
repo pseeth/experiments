@@ -16,6 +16,6 @@ rm data/raw/musdb/train/*.mp4 data/raw/musdb/test/*.mp4
 
 if [ ! -d data/musdb ]; then
     docker run --rm --workdir=/pipeline -v `pwd`:/pipeline \
-    --user $UID \
-  thesis scripts/organize_musdb.py
+    --entrypoint python \
+    thesis scripts/organize_musdb.py
 fi

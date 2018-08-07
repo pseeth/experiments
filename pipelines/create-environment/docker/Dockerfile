@@ -1,6 +1,11 @@
 # Use an official Python runtime as a parent image
 FROM nvidia/cuda
 
+ARG user_id
+ARG user_name
+RUN groupadd -r $user_name && useradd -r -u $user_id -g $user_name $user_name
+RUN chown $user_name /home
+
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 ENV PATH /opt/conda/bin:$PATH
 
@@ -22,6 +27,19 @@ RUN apt-get install -y curl grep sed dpkg && \
     rm tini.deb && \
     apt-get clean
 
+RUN apt-get install -y sox
+RUN apt-get install -y ffmpeg
+
+ADD requirements.txt /
+RUN pip install -r /requirements.txt
+RUN git clone https://github.com/pseeth/scaper && \
+    cd scaper && \
+    git checkout source_separation && \
+    pip install -e .
+RUN pip install -U git+https://github.com/pseeth/audio_embed.git
+RUN conda install pytorch torchvision -c pytorch
+
+USER $user_name
 ENV JUPYTER_PASSWORD sha1:7c4613b10073:01d7dcef0bdae99ced22d7aebaa61d931f446b27
 # Obtain the SHA hash for your chosen password and copy it above. To do this, use:
 # from notebook.auth import passwd
@@ -29,18 +47,9 @@ ENV JUPYTER_PASSWORD sha1:7c4613b10073:01d7dcef0bdae99ced22d7aebaa61d931f446b27
 # You'll be asked to put in your password twice. The SHA value will display.
 # Copy it (without the single quotes) and paste it above. This will be the password you use to login to
 # the Jupyter server.
-RUN apt-get install -y sox
-RUN apt-get install -y ffmpeg
-ADD requirements.txt /
-RUN pip install -r /requirements.txt
-RUN git clone https://github.com/pseeth/scaper && \
-    cd scaper && \
-    git checkout source_separation \
-    && pip install -e .
-RUN pip install -U git+https://github.com/pseeth/audio_embed.git
-RUN conda install pytorch torchvision -c pytorch
+
 RUN jupyter notebook --generate-config
-RUN echo "c.NotebookApp.password='${JUPYTER_PASSWORD}'" >> /root/.jupyter/jupyter_notebook_config.py
+RUN echo "c.NotebookApp.password='${JUPYTER_PASSWORD}'" >> /home/$user_name/.jupyter/jupyter_notebook_config.py
 RUN jupyter nbextension enable --py widgetsnbextension
 
-ENTRYPOINT ["python"]
+ENTRYPOINT ["/bin/bash"]
