@@ -1,19 +1,9 @@
 import torch
-from utils import *
-from loss import *
-import librosa
+import utils
 from torch.utils.data import DataLoader
-from tqdm import trange, tqdm
+from tqdm import trange
 import random
 import numpy as np
-
-def mask_mixture(mask, mix, n_fft, hop_length):
-    n = len(mix)
-    mix = librosa.util.fix_length(mix, n + n_fft // 2)
-    mix_stft = librosa.stft(mix, n_fft=n_fft, hop_length=hop_length)
-    masked_mix = mix_stft * mask
-    source = librosa.istft(masked_mix, hop_length=hop_length, length=n)
-    return source
 
 def validate(model, dset, writer, n_iter, params, device, loss_function, num_validation=5):
     model.eval()
@@ -35,15 +25,15 @@ def validate(model, dset, writer, n_iter, params, device, loss_function, num_val
 
             for j in range(0, masks.shape[-1]):
                 mask = masks[:, :, j]
-                isolated = mask_mixture(mask.T, mix, dset.n_fft, dset.hop_length)
+                isolated = utils.mask_mixture(mask.T, mix, dset.n_fft, dset.hop_length)
                 writer.add_audio('audio/source_%02d' % j, torch.from_numpy(isolated), n_iter, sample_rate = dset.sr)
 
                 mask = source_spectrograms[:, :, j] / (magnitude_spectrogram + 1e-7)
-                isolated = mask_mixture(mask.T, mix, dset.n_fft, dset.hop_length)
+                isolated = utils.mask_mixture(mask.T, mix, dset.n_fft, dset.hop_length)
                 writer.add_audio('audio/gt_source_%02d' % j, torch.from_numpy(isolated), n_iter, sample_rate = dset.sr)
 
                 mask = source_ibm[:, :, j]
-                isolated = mask_mixture(mask.T, mix, dset.n_fft, dset.hop_length)
+                isolated = utils.mask_mixture(mask.T, mix, dset.n_fft, dset.hop_length)
                 writer.add_audio('audio/binary_source_%02d' % j, torch.from_numpy(isolated), n_iter, sample_rate = dset.sr)
 
             images = []

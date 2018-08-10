@@ -4,7 +4,8 @@ import librosa
 import numpy as np
 
 class MaskEstimation(nn.Module):
-    def __init__(self, hidden_size, input_size, num_layers, num_sources, dropout, sample_rate=16000, projection_size=0, activation_type='sigmoid'):
+    def __init__(self, hidden_size=300, input_size=1025, num_layers=4, num_sources=2, dropout=.3,
+                 sample_rate=16000, projection_size=0, activation_type='sigmoid'):
         super(MaskEstimation, self).__init__()
         self.hidden_size = hidden_size
         self.input_size = input_size

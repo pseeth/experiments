@@ -6,7 +6,11 @@ from .clustering import *
 from .initializers import *
 
 class DeepAttractor(nn.Module):
-    def __init__(self, hidden_size, input_size, num_layers, num_attractors, embedding_size, dropout, sample_rate=16000, projection_size=0, num_clustering_iterations=1, activation_type='sigmoid', embedding_activation='tanh', attractor_function_type='ae', use_chimera=False, normalize_embeddings=False, threshold=None, use_enhancement=False, clustering_type='kmeans', covariance_type='diag', use_likelihoods=False, num_gaussians_per_source=1):
+    def __init__(self, hidden_size=300, input_size=1025, num_layers=4, num_attractors=2, embedding_size=10, dropout=.3,
+                 sample_rate=16000, projection_size=0, num_clustering_iterations=1, embedding_activation='tanh',
+                 attractor_function_type='ae', normalize_embeddings=False, threshold=None, use_enhancement=False,
+                 clustering_type='kmeans', covariance_type='diag', covariance_min=.5, fix_covariance=False,
+                 use_likelihoods=False, num_gaussians_per_source=1):
         super(DeepAttractor, self).__init__()
         self.hidden_size = hidden_size
         self.input_size = input_size
@@ -14,7 +18,6 @@ class DeepAttractor(nn.Module):
         self.num_attractors = num_attractors
         self.num_layers = num_layers
         self.dropout = dropout
-        self.activation_type = activation_type
         self.embedding_activation = embedding_activation
         self.use_projection = projection_size > 0
         self.sample_rate = sample_rate
@@ -26,6 +29,8 @@ class DeepAttractor(nn.Module):
         self.clustering_type = clustering_type
         self.use_likelihoods = use_likelihoods
         self.num_gaussians_per_source = num_gaussians_per_source
+        self.covariance_min =covariance_min
+        self.fix_covariance = fix_covariance
         
         allowed_covariance_types = ['diag', 'spherical', 'tied_diag', 'tied_spherical']
         if covariance_type not in allowed_covariance_types:
@@ -47,7 +52,8 @@ class DeepAttractor(nn.Module):
         elif self.clustering_type == 'gmm':
             self.add_module('clusterer', GMM(n_clusters=self.num_attractors, 
                                              n_iterations=self.num_clustering_iterations,
-                                             covariance_type=self.covariance_type))
+                                             covariance_type=self.covariance_type,
+                                             covariance_min=self.covariance_min))
             #[means (embedding_size) variances (embedding_size), prior (1)]
             attractor_output_size = self.num_gaussians_per_source*(self.embedding_size*2 + 1)
         
@@ -71,8 +77,7 @@ class DeepAttractor(nn.Module):
                                               batch_first=True,
                                               bidirectional=False,
                                               dropout=self.dropout))
-        self.add_module('scale', ScaleLayer(init_value=1.0, init_bias=self.embedding_size, bias=True))
-        
+
         self.add_module('linear', nn.Linear(self.hidden_size*2, self.input_size*self.embedding_size))
         self.initialize_parameters()
 
@@ -138,7 +143,7 @@ class DeepAttractor(nn.Module):
         #Unfold clustering with class conditional parameters
         log_likelihoods, posteriors, attractors = self.clusterer(embedding, attractors, weights)
         if self.use_likelihoods:
-            assignments = nn.functional.sigmoid(self.scale(log_likelihoods))
+            assignments = (log_likelihoods - log_likelihoods.max()).exp()
         else:
             assignments = posteriors
             
@@ -169,6 +174,8 @@ class DeepAttractor(nn.Module):
                     var = var.mean(dim=-1, keepdim=True).expand(-1, -1, self.embedding_size)
                 if self.tied_covariance:
                     var = var.mean(dim=1, keepdim=True).expand(-1, attractors.shape[1], -1)
+                if self.fix_covariance:
+                    var[:, :, :] = self.covariance_min
                 pi = nn.functional.softmax(pi.squeeze(-1), dim=-1)
                 attractors = (means, var, pi)
             else:

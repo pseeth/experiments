@@ -2,8 +2,8 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, sampler, ConcatDataset
 from networks import DeepAttractor, MaskEstimation
-from utils import *
-from loss import *
+import utils
+import loss
 from dataset import ScaperLoader
 from tqdm import trange, tqdm
 from tensorboardX import SummaryWriter
@@ -67,12 +67,16 @@ parser.add_argument("--reorder_sources", action='store_true')
 parser.add_argument("--clustering_type", default='kmeans')
 parser.add_argument("--unfold_iterations", action='store_true')
 parser.add_argument("--covariance_type", choices=['spherical', 'diag', 'tied_spherical', 'tied_diag'], default='diag')
+parser.add_argument("--covariance_min", default=.5)
+parser.add_argument("--fix_covariance", action='store_true')
 parser.add_argument("--num_gaussians_per_source", default=1)
 parser.add_argument("--use_likelihoods", action='store_true')
+
 args = parser.parse_args()
 
 params = {
     'n_fft': int(args.n_fft),
+    'input_size': int(int(args.n_fft)/2 + 1),
     'hop_length': int(args.hop_length),
     'hidden_size': int(args.hidden_size),
     'num_layers': int(args.num_layers),
@@ -117,6 +121,8 @@ params = {
     'grad_clip': 100,
     'clustering_type': args.clustering_type,
     'covariance_type': args.covariance_type,
+    'covariance_min': float(args.covariance_min),
+    'fix_covariance': args.fix_covariance,
     'num_gaussians_per_source': int(args.num_gaussians_per_source),
     'use_likelihoods': args.use_likelihoods,
     'curriculum_learning': args.curriculum_learning
@@ -167,44 +173,18 @@ dataloader = DataLoader(dataset, batch_size=params['batch_size'], num_workers=pa
 
 dummy_input, _, _, _, dummy_one_hot = dataset[0]
 params['num_attractors'] = dummy_one_hot.shape[-1]
+params['num_sources'] = params['num_attractors']
 params['sample_rate'] = dataset.sr
 dataset.reorder_sources = args.reorder_sources
 val_dataset.reorder_sources = args.reorder_sources
 
 pp.pprint(params)
 
-if not args.baseline:
-    model = DeepAttractor(input_size=int(params['n_fft']/2 + 1),
-                         sample_rate=params['sample_rate'],
-                         hidden_size=params['hidden_size'], 
-                         num_layers=params['num_layers'],
-                         dropout=params['dropout'], 
-                         num_attractors=params['num_attractors'],
-                         attractor_function_type=params['attractor_function_type'],
-                         embedding_size=params['embedding_size'],
-                         num_clustering_iterations=0 if args.unfold_iterations else params['num_clustering_iterations'],
-                         projection_size=params['projection_size'],
-                         activation_type=params['activation_type'],
-                         threshold=params['threshold'],
-                         embedding_activation=params['embedding_activation'],
-                         normalize_embeddings=params['normalize_embeddings'],
-                         use_enhancement=params['use_enhancement'],
-                         clustering_type=params['clustering_type'],
-                         covariance_type=params['covariance_type'],
-                         num_gaussians_per_source=params['num_gaussians_per_source'],
-                         use_likelihoods=params['use_likelihoods'])
-else:
-    model = MaskEstimation(input_size=int(params['n_fft']/2 + 1),
-                         sample_rate=params['sample_rate'],
-                         hidden_size=params['hidden_size'], 
-                         num_layers=params['num_layers'],
-                         dropout=params['dropout'], 
-                         num_sources=params['num_attractors'],
-                         projection_size=params['projection_size'],
-                         activation_type=params['activation_type'])
+class_func = MaskEstimation if args.baseline else DeepAttractor
+model = utils.load_class_from_params(params, class_func).to(device)
 
 if not params['compute_training_stats']:
-    mean, std = compute_statistics_on_dataset(dataloader, device)
+    mean, std = utils.compute_statistics_on_dataset(dataloader, device)
     params['training_stats'] = {'mean': mean, 'std': std + 1e-7}
     dataset.stats = params['training_stats']
     val_dataset.stats = params['training_stats']
@@ -243,7 +223,7 @@ if args.resume and len(checkpoints) > 0:
         #    raise ValueError("Job is still running", args.log_dir)
         model.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
-        move_optimizer(optimizer, device)
+        utils.move_optimizer(optimizer, device)
         epochs = trange(checkpoint['epoch'], params['num_epochs'])
         n_iter = num_iterations*checkpoint['epoch']
         print("Resuming job: ", args.log_dir)
@@ -261,18 +241,18 @@ elif params['loss_function'] == 'kl':
     loss_function = nn.KLDivLoss()
 elif params['loss_function'] == 'weighted_l1':
     l1_loss = nn.L1Loss()
-    loss_function = WeightedL1Loss(loss_function=l1_loss)
+    loss_function = loss.WeightedL1Loss(loss_function=l1_loss)
 
 if params['attractor_loss_function'] == 'none':
     attractor_loss_function = None
 elif params['attractor_loss_function'] == 'sparse':
-    attractor_loss_function = sparse_orthogonal_loss
+    attractor_loss_function = loss.sparse_orthogonal_loss
     attractor_loss_weights = (1., 0.)
 elif params['attractor_loss_function'] == 'orth':
-    attractor_loss_function = sparse_orthogonal_loss
+    attractor_loss_function = loss.sparse_orthogonal_loss
     attractor_loss_weights = (0., 1.)
 elif params['attractor_loss_function'] == 'sparse_orth':
-    attractor_loss_function = sparse_orthogonal_loss
+    attractor_loss_function = loss.sparse_orthogonal_loss
     attractor_loss_weights = (1., 1.)
 
 if torch.cuda.device_count() > 1:
@@ -280,14 +260,16 @@ if torch.cuda.device_count() > 1:
 model = model.to(device)
 module = model.module if torch.cuda.device_count() > 1 else model
 
-show_model(model)
+utils.show_model(model)
 
 val_losses = []
 
 for epoch in epochs:
     if args.unfold_iterations:
-        if (epoch % int(params['num_epochs'] / 5) == 0) and (epoch >= int(params['num_epochs'] / 5)):
-            module.clusterer.n_iterations = min(params['num_clustering_iterations'], module.clusterer.n_iterations + 1)
+        if (epoch % int(params['num_epochs'] / 5) == 0):
+            n_iterations = int(params['num_epoch'] / epoch)
+            module.clusterer.n_iterations = min(params['num_clustering_iterations'], n_iterations)
+
     if args.curriculum_learning:
         if epoch >= int(params['num_epochs'] / 5):
             # Lengthen sequences for learning
@@ -351,7 +333,7 @@ for epoch in epochs:
         scheduler.step(val_loss)
 
     if params['save_checkpoints']:
-        save_checkpoint({
+        utils.save_checkpoint({
             'epoch': epoch + 1,
             'state_dict': module.state_dict(),
             'optimizer': optimizer.state_dict(),

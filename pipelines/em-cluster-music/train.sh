@@ -4,7 +4,7 @@
 mkdir -p runs
 covariance_type="tied_spherical"
 num_run=$(ls runs/ | wc -l |  tr -d ' ')
-run_id="run$num_run-$covariance_type-unfold"
+run_id="run$num_run-$covariance_type-posterior-fix-cov"
 model_path="/experiment/pipelines/em-cluster-music/runs/$run_id"
 echo $model_path > model_path
 
@@ -27,7 +27,6 @@ docker run --rm --workdir=/experiment -v `pwd`/../..:/experiment \
     --validation_folder /experiment/data/generated/musdb/validation/ \
     --loss_function l1 \
     --target_type msa \
-    --activation_type sigmoid \
     --disable-training-stats \
     --n_fft 2048 \
     --hop_length 512 \
@@ -37,9 +36,10 @@ docker run --rm --workdir=/experiment -v `pwd`/../..:/experiment \
     --batch_size 20 \
     --clustering_type gmm \
     --covariance_type $covariance_type \
-    --unfold_iterations \
-    --num_clustering_iterations 1 \
-    --embedding_size 10 \
+    --num_clustering_iterations 0 \
+    --fix_covariance \
+    --covariance_min 1.0 \
+    --embedding_size 15 \
     --initial_length .2 \
     --curriculum_learning \
     --source_labels vocals_drums_bass_other \

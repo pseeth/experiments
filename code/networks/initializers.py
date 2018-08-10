@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import librosa
 import numpy as np
 
 class AE(nn.Module):
@@ -17,9 +16,10 @@ class AE(nn.Module):
         for name, param in self.sequential.named_parameters():
             if 'bias' in name:
                 nn.init.constant_(param, 0.0)
+                param.requires_grad_(False)
             elif 'weight' in name:
                 nn.init.xavier_normal_(param)
-                param.data[int((self.embedding_size - 1)/2):-1, :] = np.sqrt(.1)
+                param.data[int((self.embedding_size - 1)/2):-1, :] = np.sqrt(1.0)
 
     def forward(self, x):
         return self.sequential(x)

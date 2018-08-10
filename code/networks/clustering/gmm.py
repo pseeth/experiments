@@ -1,13 +1,13 @@
 import torch
 import torch.nn as nn
-import librosa
 import numpy as np
     
 class GMM(nn.Module):
-    def __init__(self, n_clusters, n_iterations=5, covariance_type='diag'):
+    def __init__(self, n_clusters, n_iterations=5, covariance_type='diag', covariance_min=0.0):
         super(GMM, self).__init__()
         self.n_clusters = n_clusters
         self.n_iterations = n_iterations
+        self.covariance_min = covariance_min
         
         allowed_covariance_types = ['diag', 'spherical', 'tied_diag', 'tied_spherical']
         if covariance_type not in allowed_covariance_types:
@@ -48,7 +48,7 @@ class GMM(nn.Module):
         weighted_embeddings = posteriors * data
         updated_means = torch.sum(weighted_embeddings, dim=2) / (cluster_sizes + 1e-7)
         
-        distance = data - means.unsqueeze(2).expand(-1, -1, 1, -1)
+        distance = data - updated_means.unsqueeze(2).expand(-1, -1, 1, -1)
         distance = posteriors * torch.pow(distance, 2)
         
         if self.covariance_type == 'spherical':
@@ -56,6 +56,7 @@ class GMM(nn.Module):
             updated_var = torch.mean(updated_var, dim=-1, keepdim=True).expand(-1, -1, updated_var.shape[-1])
         elif self.covariance_type == 'diag':
             updated_var = torch.sum(distance, dim=2)
+
         if self.tied_covariance:
             updated_var = torch.sum(updated_var, dim=1, keepdim=True).expand(-1, updated_var.shape[1], -1)
             updated_var = (updated_var / (cluster_sizes.sum() + 1e-7))
@@ -65,8 +66,8 @@ class GMM(nn.Module):
         return updated_means, updated_var, updated_pi
     
     def update_posteriors(self, likelihoods):
-        max_value = likelihoods.max(dim=1, keepdim=True)[0]
         #log-sum-exp trick https://www.xarg.org/2016/06/the-log-sum-exp-trick-in-machine-learning/
+        max_value = likelihoods.max(dim=1, keepdim=True)[0]
         likelihoods_sum = max_value + torch.log((likelihoods - max_value).exp().sum(dim=1, keepdim=True))
         posteriors = (likelihoods - likelihoods_sum).exp()
         return posteriors, likelihoods
@@ -76,7 +77,7 @@ class GMM(nn.Module):
         num_examples = data.shape[1]
         num_features = data.shape[-1]
         num_clusters = means.shape[1]
-        inv_covariance =  1. / (var + 1e-7)
+        inv_covariance =  1. / (var + 1e-6)
         data = data.unsqueeze(1).expand(-1, 1, -1, -1)
         means = means.unsqueeze(2).expand(-1, -1, 1, -1)
         distance = torch.pow(data - means, 2)
@@ -96,12 +97,13 @@ class GMM(nn.Module):
         if parameters is None:
             parameters = self.initialize_parameters(data)
         means, var, pi = parameters
-            
+
         for i in range(self.n_iterations):
             likelihoods = self.update_likelihoods(data, means, var, pi)
             posteriors, likelihoods = self.update_posteriors(likelihoods)
             means, var, pi = self.update_parameters(posteriors, data, weights, means)
-            
+            var = var + 1e-6 + self.covariance_min
+
         likelihoods = self.update_likelihoods(data, means, var, pi)
         posteriors, likelihoods = self.update_posteriors(likelihoods)
         return likelihoods.permute(0, 2, 1), posteriors.permute(0, 2, 1), (means, var, pi)

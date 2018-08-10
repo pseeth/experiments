@@ -1,10 +1,30 @@
 import torch
 import numpy as np
 from tqdm import trange
+from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 import pandas as pd
 import shutil
+import inspect
+import librosa
+
+def mask_mixture(mask, mix, n_fft, hop_length):
+    n = len(mix)
+    mix = librosa.util.fix_length(mix, n + n_fft // 2)
+    mix_stft = librosa.stft(mix, n_fft=n_fft, hop_length=hop_length)
+    masked_mix = mix_stft * mask
+    source = librosa.istft(masked_mix, hop_length=hop_length, length=n)
+    return source
+
+def load_class_from_params(params, class_func):
+    arguments = inspect.getfullargspec(class_func).args[1:]
+    if 'input_size' not in params and 'input_size' in arguments:
+        params['input_size'] = int(params['n_fft']/2 + 1)
+    if 'num_sources' not in params and 'num_sources' in arguments:
+        params['num_sources'] = params['num_attractors']
+    filtered_params = {p: params[p] for p in params if p in arguments}
+    return class_func(**filtered_params)
 
 def project_embeddings(embedding, num_dimensions=3, t=0.0, fig=None, ax=None, bins=None, gridsize=50):
     """

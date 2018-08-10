@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import librosa
 import numpy as np
 
 class ScaleLayer(nn.Module):
@@ -27,6 +26,7 @@ class KMeans(nn.Module):
             raise ValueError('init_method \'%s\' not supported. Choose from [%s]' % (init_method, ', '.join(allowed_methods)))
             
     def initialize_means(self, data):
+        means = []
         if self.init_method == 'random':
             sampled = data.new(data.shape[0], self.n_clusters).random_(0, data.shape[1])
             sampled = data.new(np.arange(0, data.shape[0])).unsqueeze(1).expand(-1, sampled.shape[1])*data.shape[1] + sampled
