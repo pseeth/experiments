@@ -4,16 +4,26 @@ metadata:
   publication_type: article
   upload_type: publication
 pipelines:
-  create-environment:
+  create-docker-environment:
     envs:
-    - host
-    path: pipelines/create-environment
+      host:
+        args: []
+    path: pipelines/create-docker-environment
     stages:
     - build-docker-image
     - launch-services
+  create-anaconda-environment:
+    envs:
+      host:
+        args: []
+    path: pipelines/create-anaconda-environment
+    stages:
+    - build-conda-env
+    - launch-services
   prepare-music-data:
     envs:
-    - host
+      host:
+        args: []
     path: pipelines/prepare-music-data
     stages:
     - prepare-musdb
@@ -21,7 +31,8 @@ pipelines:
     - move-dataset
   rnn-music-baseline:
     envs:
-    - host
+      host:
+        args: []
     path: pipelines/rnn-music-baseline
     stages:
     - train
@@ -29,7 +40,8 @@ pipelines:
     - evaluate
   em-cluster-music:
     envs:
-    - host
+      host:
+        args: []
     path: pipelines/em-cluster-music
     stages:
     - train
