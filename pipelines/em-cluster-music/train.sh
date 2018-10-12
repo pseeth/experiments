@@ -4,7 +4,7 @@
 mkdir -p runs
 covariance_type="tied_spherical"
 num_run=$(ls runs/ | wc -l |  tr -d ' ')
-run_id="run$num_run-$covariance_type-posterior-fix-cov"
+run_id="run$num_run-$covariance_type-likelihood-fix-cov"
 model_path="/experiment/pipelines/em-cluster-music/runs/$run_id"
 echo $model_path > model_path
 
@@ -38,6 +38,7 @@ docker run --rm --workdir=/experiment -v `pwd`/../..:/experiment \
     --covariance_type $covariance_type \
     --num_clustering_iterations 0 \
     --fix_covariance \
+    --use_likelihood \
     --covariance_min 1.0 \
     --embedding_size 15 \
     --initial_length .2 \

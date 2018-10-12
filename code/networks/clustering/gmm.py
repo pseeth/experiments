@@ -3,11 +3,12 @@ import torch.nn as nn
 import numpy as np
     
 class GMM(nn.Module):
-    def __init__(self, n_clusters, n_iterations=5, covariance_type='diag', covariance_min=0.0):
+    def __init__(self, n_clusters, n_iterations=5, covariance_type='diag', covariance_min=0.0, fix_covariance=False):
         super(GMM, self).__init__()
         self.n_clusters = n_clusters
         self.n_iterations = n_iterations
         self.covariance_min = covariance_min
+        self.fix_covariance = fix_covariance
         
         allowed_covariance_types = ['diag', 'spherical', 'tied_diag', 'tied_spherical']
         if covariance_type not in allowed_covariance_types:
@@ -32,11 +33,13 @@ class GMM(nn.Module):
         
         return means, var, pi
         
-    def update_parameters(self, posteriors, data, weights, means):
+    def update_parameters(self, posteriors, data, weights):
         if not isinstance(weights, float):
             weights = weights.unsqueeze(1).unsqueeze(-1)
-        
-        num_examples = data.shape[1]
+            num_examples = weights.sum(dim=2)
+        else:
+            num_examples = data.shape[1]
+
         posteriors = posteriors.unsqueeze(-1).expand(-1, -1, -1, 1)
         posteriors = posteriors * weights #data weighting
         
@@ -50,18 +53,16 @@ class GMM(nn.Module):
         
         distance = data - updated_means.unsqueeze(2).expand(-1, -1, 1, -1)
         distance = posteriors * torch.pow(distance, 2)
-        
-        if self.covariance_type == 'spherical':
-            updated_var = torch.sum(distance, dim=2)
-            updated_var = torch.mean(updated_var, dim=-1, keepdim=True).expand(-1, -1, updated_var.shape[-1])
-        elif self.covariance_type == 'diag':
-            updated_var = torch.sum(distance, dim=2)
+        updated_var = torch.sum(distance, dim=2)
 
         if self.tied_covariance:
             updated_var = torch.sum(updated_var, dim=1, keepdim=True).expand(-1, updated_var.shape[1], -1)
             updated_var = (updated_var / (cluster_sizes.sum() + 1e-7))
         else:
             updated_var = updated_var / (cluster_sizes + 1e-7)
+
+        if self.covariance_type == 'spherical':
+            updated_var = torch.mean(updated_var, dim=-1, keepdim=True).expand(-1, -1, updated_var.shape[-1])
             
         return updated_means, updated_var, updated_pi
     
@@ -101,8 +102,10 @@ class GMM(nn.Module):
         for i in range(self.n_iterations):
             likelihoods = self.update_likelihoods(data, means, var, pi)
             posteriors, likelihoods = self.update_posteriors(likelihoods)
-            means, var, pi = self.update_parameters(posteriors, data, weights, means)
+            means, var, pi = self.update_parameters(posteriors, data, weights)
             var = var + 1e-6 + self.covariance_min
+            if self.fix_covariance:
+                var[:, :, :] = self.covariance_min
 
         likelihoods = self.update_likelihoods(data, means, var, pi)
         posteriors, likelihoods = self.update_posteriors(likelihoods)

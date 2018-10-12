@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import librosa
 import numpy as np
-from .clustering import *
-from .initializers import *
+from .clustering import KMeans, GMM, ScaleLayer
+from .initializers import AE, CAE, VAE
 
 class DeepAttractor(nn.Module):
     def __init__(self, hidden_size=300, input_size=1025, num_layers=4, num_attractors=2, embedding_size=10, dropout=.3,
@@ -221,11 +221,13 @@ class DeepAttractor(nn.Module):
         if self.threshold is not None:
             weights[weights < self.threshold] = 0.0
             weights[weights > self.threshold] = 1.0
-        
+
+
         output = self.rnn(input_data)[0]
         embedding = self.linear(output)
         embedding = embedding.view(num_batch, -1, self.embedding_size)
         embedding = self.activation(embedding)
+        #embedding = weights * embedding #do this?
         self.embedding = embedding
                 
         if one_hots is None or self.attractor_function_type != 'cae':
