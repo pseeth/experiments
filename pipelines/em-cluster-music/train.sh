@@ -5,7 +5,7 @@ mkdir -p runs
 covariance_type="tied_spherical"
 num_run=$(ls runs/ | wc -l |  tr -d ' ')
 run_id="run$num_run-$covariance_type-likelihood-fix-cov"
-model_path="/experiment/pipelines/em-cluster-music/runs/$run_id"
+
 echo $model_path > model_path
 USE_DOCKER=`cat ../DOCKER`
 
@@ -18,6 +18,7 @@ git rev-parse HEAD > runs/${run_id}/commit_hash
 
 if [ ! -d data/musdb ]; then
     if [ $USE_DOCKER -eq 1 ]; then
+        model_path="/experiment/pipelines/em-cluster-music/runs/$run_id"
         docker run --rm --workdir=/experiment -v `pwd`/../..:/experiment \
           --runtime=nvidia \
           --name em-cluster-music \
@@ -55,6 +56,7 @@ if [ ! -d data/musdb ]; then
     fi
 
     if [ $USE_DOCKER -eq 0 ]; then
+        model_path="pipelines/em-cluster-music/runs/$run_id"
         source activate prem
         cd ../../
         python code/train.py \

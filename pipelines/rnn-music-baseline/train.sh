@@ -4,7 +4,6 @@
 mkdir -p runs
 num_run=9 #$(ls runs/ | wc -l |  tr -d ' ')
 run_id="run$num_run"
-model_path="/experiment/pipelines/rnn-music-baseline/runs/$run_id"
 echo $model_path > model_path
 USE_DOCKER=`cat ../DOCKER`
 
@@ -15,6 +14,7 @@ git rev-parse HEAD > runs/${run_id}/commit_hash
 
 if [ ! -d data/musdb ]; then
     if [ $USE_DOCKER -eq 1 ]; then
+        model_path="/experiment/pipelines/rnn-music-baseline/runs/$run_id"
         docker run --rm --workdir=/experiment -v `pwd`/../..:/experiment \
           --runtime=nvidia \
           --name rnn-music-baseline \
@@ -50,6 +50,7 @@ if [ ! -d data/musdb ]; then
     if [ $USE_DOCKER -eq 0 ]; then
         source activate prem
         cd ../../
+        model_path="pipelines/rnn-music-baseline/runs/$run_id"
         python code/train.py \
             --log_dir $model_path \
             --training_folder data/generated/musdb/train \
