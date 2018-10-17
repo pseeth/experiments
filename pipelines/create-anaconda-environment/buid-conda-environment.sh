@@ -16,6 +16,7 @@ git clone https://github.com/pseeth/scaper
 cd scaper
 git checkout source_separation
 pip install -e .
+cd ..
 
 pip install -U git+https://github.com/pseeth/audio_embed.git
 conda install -y pytorch torchvision -c pytorch

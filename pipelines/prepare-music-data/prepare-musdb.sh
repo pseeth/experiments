@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # [wf] execute setup stage
+USE_DOCKER=`cat ../DOCKER`
 
 mkdir -p data
 mkdir -p data/raw
@@ -15,7 +16,14 @@ fi
 rm data/raw/musdb/train/*.mp4 data/raw/musdb/test/*.mp4
 
 if [ ! -d data/musdb ]; then
-    docker run --rm --workdir=/pipeline -v `pwd`:/pipeline \
-    --entrypoint python \
-    thesis scripts/organize_musdb.py
+    if [ $USE_DOCKER -eq 1 ]; then
+        docker run --rm --workdir=/pipeline -v `pwd`:/pipeline \
+        --entrypoint python \
+        thesis scripts/organize_musdb.py
+    fi
+
+    if [ $USE_DOCKER -eq 0 ]; then
+        source activate prem
+        python scripts/organize_musdb.py
+    fi
 fi

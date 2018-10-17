@@ -12,14 +12,24 @@ pipelines:
     stages:
     - build-docker-image
     - launch-services
-  create-anaconda-environment:
+  create-virtual-environment:
     envs:
       host:
         args: []
-    path: pipelines/create-anaconda-environment
+    parameters: []
+    path: pipelines/create-virtual-environment
+    requirements: {}
     stages:
-    - build-conda-env
-    - launch-services
+    - build-conda-environment
+  em-cluster-music:
+    envs:
+      host:
+        args: []
+    path: pipelines/em-cluster-music
+    stages:
+    - train
+    - separate
+    - evaluate
   prepare-music-data:
     envs:
       host:
@@ -38,14 +48,6 @@ pipelines:
     - train
     - separate
     - evaluate
-  em-cluster-music:
-    envs:
-      host:
-        args: []
-    path: pipelines/em-cluster-music
-    stages:
-    - train
-    - separate
-    - evaluate
 popperized:
 - github/popperized
+version: 1
