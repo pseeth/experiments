@@ -1,0 +1,14 @@
+numpy
+scipy
+musdb
+museval
+librosa
+tqdm
+tensorboardX
+tensorflow
+jams==0.2.2
+matplotlib==2.2.2
+pandas==0.22.0
+scikit-learn==0.19.1
+ipywidgets
+ffmpy
