@@ -56,11 +56,11 @@ if [ ! -d data/musdb ]; then
 
     if [ $USE_DOCKER -eq 0 ]; then
         source activate prem
-        cd ../../code
-        python train.py \
+        cd ../../
+        python code/train.py \
             --log_dir $model_path \
-            --training_folder /experiment/data/generated/musdb/train \
-            --validation_folder /experiment/data/generated/musdb/validation/ \
+            --training_folder data/generated/musdb/train \
+            --validation_folder data/generated/musdb/validation/ \
             --loss_function l1 \
             --target_type msa \
             --disable-training-stats \
