@@ -2,7 +2,7 @@
 
 source activate prem
 if [ $? -eq 1 ]; then
-    conda create -y --name prem
+    conda create python=3 -y --name prem
     source activate prem
 fi
 
