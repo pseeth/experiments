@@ -60,7 +60,7 @@ os.makedirs(base_directory, exist_ok=True)
 num_training = 20000
 num_validation = 2000
 num_testing = 0
-n_jobs = 12
+n_jobs = 20
 splits = [('train', num_training),
           ('validation', num_validation),
           ('test', num_testing)]
