@@ -49,7 +49,7 @@ if [ ! -d data/musdb ]; then
 
     if [ $USE_DOCKER -eq 0 ]; then
         source activate prem
-        cd ../../
+        cd ../../z
         model_path="pipelines/rnn-music-baseline/runs/$run_id"
         python code/train.py \
             --log_dir $model_path \

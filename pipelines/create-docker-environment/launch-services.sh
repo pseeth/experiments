@@ -12,6 +12,7 @@ docker run --rm --workdir=/pipeline -v `pwd`/..:/pipeline \
   thesis --logdir .
 
 docker run --rm --workdir=/pipeline -v `pwd`/../..:/pipeline \
+    -v /media/hdd_3tb/datasets:/datasets \
     --runtime=nvidia \
     -p 127.0.0.1:$JUPYTER_HOST_PORT:8888 -d \
     --entrypoint jupyter \
