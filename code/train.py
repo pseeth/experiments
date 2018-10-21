@@ -3,7 +3,7 @@ from torch import nn
 from torch.utils.data import DataLoader, sampler, ConcatDataset
 from networks import DeepAttractor, MaskEstimation
 import utils
-import loss
+from loss import *
 from dataset import ScaperLoader
 from tqdm import trange, tqdm
 from tensorboardX import SummaryWriter
@@ -233,26 +233,28 @@ else:
     with open(os.path.join(args.log_dir, 'params.json'), 'w') as f:
         json.dump(params, f, sort_keys=True, indent=4)
 
-if params['loss_function'] == 'l1':
+if 'l1' in params['loss_function']:
     loss_function = nn.L1Loss()
-elif params['loss_function'] == 'mse':
+elif 'mse' in params['loss_function']:
     loss_function = nn.MSELoss()
-elif params['loss_function'] == 'kl':
+elif 'kl' in params['loss_function']:
     loss_function = nn.KLDivLoss()
-elif params['loss_function'] == 'weighted_l1':
+elif 'weighted_l1' in params['loss_function']:
     l1_loss = nn.L1Loss()
-    loss_function = loss.WeightedL1Loss(loss_function=l1_loss)
+    loss_function = WeightedL1Loss(loss_function=l1_loss)
+elif params['loss_function'] == 'dc':
+    loss_function = affinity_loss
 
 if params['attractor_loss_function'] == 'none':
     attractor_loss_function = None
 elif params['attractor_loss_function'] == 'sparse':
-    attractor_loss_function = loss.sparse_orthogonal_loss
+    attractor_loss_function = sparse_orthogonal_loss
     attractor_loss_weights = (1., 0.)
 elif params['attractor_loss_function'] == 'orth':
-    attractor_loss_function = loss.sparse_orthogonal_loss
+    attractor_loss_function = sparse_orthogonal_loss
     attractor_loss_weights = (0., 1.)
 elif params['attractor_loss_function'] == 'sparse_orth':
-    attractor_loss_function = loss.sparse_orthogonal_loss
+    attractor_loss_function = sparse_orthogonal_loss
     attractor_loss_weights = (1., 1.)
 
 if torch.cuda.device_count() > 1:
@@ -289,8 +291,14 @@ for epoch in epochs:
         source_masks, attractors, embedding, log_likelihoods = model(spectrogram, one_hots)
         
         source_estimates = source_masks * magnitude_spectrogram
-        loss = loss_function(source_estimates, source_spectrograms)
-        writer.add_scalar('mask_loss/scalar', loss.item(), n_iter)
+        if params['loss_function'] != 'dc':
+            loss = loss_function(source_estimates, source_spectrograms)
+            writer.add_scalar('mask_loss/scalar', loss.item(), n_iter)
+        elif params['loss_function'] == 'dc':
+            projected_ibms = module.project(source_ibms)
+            projected_ibms = projected_ibms.clamp(0.0, 1.0)
+            loss = affinity_cost(embedding, projected_ibms)
+            writer.add_scalar('affinity_loss/scalar', loss, n_iter)
 
         if not args.baseline:
             if attractor_loss_function is not None:
@@ -301,7 +309,15 @@ for epoch in epochs:
                 attractor_loss = attractor_loss_function(attractor_data, weights=attractor_loss_weights)
                 writer.add_scalar('attr_loss/scalar', attractor_loss.item(), n_iter)
                 loss += params['attractor_alpha']*attractor_loss
-        
+
+            if params['loss_function'] != 'dc' and 'dc' in params['loss_function']:
+                projected_ibms = module.project(source_ibms)
+                projected_ibms = projected_ibms.clamp(0.0, 1.0)
+
+                affinity_loss = affinity_cost(embedding, projected_ibms)
+                loss += affinity_loss
+
+                writer.add_scalar('affinity_loss/scalar', affinity_loss, n_iter)
             writer.add_scalar('inv_variance/scalar', 1/attractors[1].mean().item(), n_iter)
             writer.add_scalar('log_likelihood/scalar', log_likelihoods.mean().item(), n_iter)
             writer.add_scalar('embedding/scalar', embedding.norm(p=2).item(), n_iter)

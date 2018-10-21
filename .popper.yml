@@ -22,6 +22,7 @@ pipelines:
     stages:
     - build-conda-environment
   em-cluster-music:
+    timeout: 0
     envs:
       host:
         args: []

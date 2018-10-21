@@ -16,12 +16,13 @@ def weighted_cross_entropy(loss_function, spectrogram, source_masks, source_ibms
     return loss
 
 def affinity_cost(embedding, assignments):
-    batch_size, sequence_length, num_frequencies, embedding_size = embedding.size()
+    batch_size, num_points, embedding_size = embedding.size()
     _, _, _, num_sources = assignments.size()
-    embedding = embedding.view(-1, embedding.size()[-1])
-    assignments = assignments.view(-1, assignments.size()[-1])
+    embedding = embedding.view(-1, embedding_size)
+    assignments = assignments.view(-1, num_sources)
 
     silence_mask = torch.sum(assignments.detach(), dim=-1, keepdim=True)
+
     embedding = silence_mask * embedding
     class_weights = nn.functional.normalize(torch.sum(assignments.detach(), dim=-2), p=1, dim=-1).unsqueeze(0)
     class_weights = 1.0 / (torch.sqrt(class_weights) + 1e-7)
@@ -31,8 +32,8 @@ def affinity_cost(embedding, assignments):
     assignments = assignments * weights.repeat(1, assignments.size()[-1])
     embedding = embedding * weights.repeat(1, embedding.size()[-1])
 
-    embedding = embedding.view(batch_size, sequence_length*num_frequencies, embedding_size)
-    assignments = assignments.view(batch_size, sequence_length*num_frequencies, num_sources)
+    embedding = embedding.view(batch_size, num_points, embedding_size)
+    assignments = assignments.view(batch_size, num_points, num_sources)
 
     embedding_transpose = embedding.permute(0, 2, 1)
     assignments_transpose = assignments.permute(0, 2, 1)
@@ -41,7 +42,7 @@ def affinity_cost(embedding, assignments):
     loss_est_true = torch.sum(torch.matmul(embedding_transpose, assignments)**2)
     loss_true = torch.sum(torch.matmul(assignments_transpose, assignments)**2)
     loss = loss_est - 2*loss_est_true + loss_true
-    #loss = loss / norm
+    loss = loss / norm.detach()
     return loss
 
 def sparse_orthogonal_loss(attractors, weights=(1., 1.)):

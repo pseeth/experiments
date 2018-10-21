@@ -2,9 +2,9 @@
 # [wf] execute train stage
 
 mkdir -p runs
-covariance_type="tied_spherical"
+covariance_type="diag"
 num_run=$(ls runs/ | wc -l |  tr -d ' ')
-run_id="run$num_run-$covariance_type-likelihood-fix-cov"
+run_id="run$num_run-$covariance_type-dc"
 
 echo $model_path > model_path
 USE_DOCKER=`cat ../DOCKER`
@@ -41,9 +41,6 @@ if [ ! -d data/musdb ]; then
             --clustering_type gmm \
             --covariance_type $covariance_type \
             --num_clustering_iterations 0 \
-            --fix_covariance \
-            --use_likelihood \
-            --covariance_min 1.0 \
             --embedding_size 15 \
             --initial_length .2 \
             --curriculum_learning \
@@ -75,9 +72,6 @@ if [ ! -d data/musdb ]; then
             --clustering_type gmm \
             --covariance_type $covariance_type \
             --num_clustering_iterations 0 \
-            --fix_covariance \
-            --use_likelihood \
-            --covariance_min 1.0 \
             --embedding_size 15 \
             --initial_length .2 \
             --curriculum_learning \

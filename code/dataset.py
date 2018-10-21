@@ -87,6 +87,8 @@ class ScaperLoader(Dataset):
         source_ibm[np.arange(source_ibm.shape[0]), source_argmax] = 1.0
         
         source_ibm = source_ibm.reshape(shape)
+        silence_mask = np.expand_dims(mix_log_magnitude, axis=-1) > -40
+        source_ibm = source_ibm * silence_mask
         source_log_magnitudes = source_log_magnitudes.reshape(shape)
         
         if self.output_type == 'ibm':
