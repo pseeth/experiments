@@ -48,7 +48,7 @@ def gmm_spatial_clustering(mix, sr, num_sources, n_fft, hop_length, verbose=True
                           np.cos(interphase_difference).flatten()]).T
     features_fit = features[weights > .5]
 
-    clusterer = GaussianMixture(n_components=2, covariance_type='full', init_params='kmeans')
+    clusterer = GaussianMixture(n_components=num_sources, covariance_type='full', init_params='kmeans')
     clusterer.fit(features_fit)
     assignments = clusterer.predict_proba(features)
     assignments = assignments.reshape(mix_stft.shape[:-1] + (-1,))
