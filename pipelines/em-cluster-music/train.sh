@@ -4,7 +4,7 @@
 mkdir -p runs
 covariance_type="diag"
 num_run=$(ls runs/ | wc -l |  tr -d ' ')
-run_id="run$num_run-$covariance_type-dc"
+run_id="run$num_run-$covariance_type-dc-10"
 
 echo $model_path > model_path
 USE_DOCKER=`cat ../DOCKER`
@@ -29,7 +29,7 @@ if [ ! -d data/musdb ]; then
             --log_dir $model_path \
             --training_folder /experiment/data/generated/musdb/train \
             --validation_folder /experiment/data/generated/musdb/validation/ \
-            --loss_function l1 \
+            --loss_function l1_dc \
             --target_type msa \
             --disable-training-stats \
             --n_fft 2048 \

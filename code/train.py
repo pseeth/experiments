@@ -295,9 +295,12 @@ for epoch in epochs:
             loss = loss_function(source_estimates, source_spectrograms)
             writer.add_scalar('mask_loss/scalar', loss.item(), n_iter)
         elif params['loss_function'] == 'dc':
-            projected_ibms = module.project(source_ibms)
-            projected_ibms = projected_ibms.clamp(0.0, 1.0)
-            loss = affinity_cost(embedding, projected_ibms)
+            if params['projection_size'] > 0:
+                projected_ibms = module.project(source_ibms)
+                projected_ibms = projected_ibms.clamp(0.0, 1.0)
+            else:
+                projected_ibms = source_ibms
+            loss = 10*affinity_cost(embedding, projected_ibms)
             writer.add_scalar('affinity_loss/scalar', loss, n_iter)
 
         if not args.baseline:
@@ -311,10 +314,13 @@ for epoch in epochs:
                 loss += params['attractor_alpha']*attractor_loss
 
             if params['loss_function'] != 'dc' and 'dc' in params['loss_function']:
-                projected_ibms = module.project(source_ibms)
-                projected_ibms = projected_ibms.clamp(0.0, 1.0)
+                if params['projection_size'] > 0:
+                    projected_ibms = module.project(source_ibms)
+                    projected_ibms = projected_ibms.clamp(0.0, 1.0)
+                else:
+                    projected_ibms = source_ibms
 
-                affinity_loss = affinity_cost(embedding, projected_ibms)
+                affinity_loss = 10*affinity_cost(embedding, projected_ibms)
                 loss += affinity_loss
 
                 writer.add_scalar('affinity_loss/scalar', affinity_loss, n_iter)

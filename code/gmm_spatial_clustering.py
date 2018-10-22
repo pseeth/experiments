@@ -19,10 +19,12 @@ def mask_mixture(source_mask, mix, n_fft, hop_length):
 
 def multichannel_stft(mix, n_fft, hop_length):
     mix_stft = []
+    mix_log_magnitude = []
     for ch in range(mix.shape[0]):
         _mix_log_magnitude, _mix_stft = transform(mix[ch], n_fft, hop_length)
         mix_stft.append(_mix_stft)
-    return np.stack(mix_stft, axis=-1)
+        mix_log_magnitude.append(_mix_log_magnitude)
+    return np.stack(mix_stft, axis=-1), np.stack(mix_log_magnitude, axis=-1)
 
 def extract_spatial_features(mix_stft, n_fft, sr):
     interlevel_difference = np.abs((mix_stft[:, :, 0] + 1e-8) ** 2 / (mix_stft[:, :, 1] + 1e-8)) ** 2
@@ -32,23 +34,21 @@ def extract_spatial_features(mix_stft, n_fft, sr):
     interphase_difference = np.angle(mix_stft[:, :, 0] * np.conj(mix_stft[:, :, 1])) / (frequencies + 1.0)
     return interlevel_difference, interphase_difference
 
-def gmm_spatial_clustering(mix, sr, num_sources, n_fft, hop_length, verbose=True):
-    mix_stft = multichannel_stft(mix, n_fft, hop_length)
-
-    weights = np.mean(20 * np.log10(np.abs(mix_stft) + 1e-8), axis=-1).flatten()
-    weights -= weights.min()
-    weights /= weights.max()
+def gmm_spatial_clustering(mix, sr, num_sources, n_fft, hop_length, covariance_type='full', verbose=True):
+    mix_stft, mix_log_magnitude = multichannel_stft(mix, n_fft, hop_length)
+    weights = np.max(mix_log_magnitude, axis=-1).flatten() > -40
 
     interlevel_difference, interphase_difference = extract_spatial_features(mix_stft, n_fft, sr)
     features = np.vstack([np.sin(interphase_difference).flatten(),
                           np.cos(interphase_difference).flatten()]).T
-    features_fit = features[weights > .5]
+    features_fit = features[weights]
 
-    clusterer = GaussianMixture(n_components=num_sources, covariance_type='full', init_params='kmeans')
+    clusterer = GaussianMixture(n_components=num_sources, covariance_type=covariance_type, init_params='kmeans')
     clusterer.fit(features_fit)
     assignments = clusterer.predict_proba(features)
     assignments = assignments.reshape(mix_stft.shape[:-1] + (-1,))
-    scores = np.exp(clusterer.score_samples(features).reshape(mix_stft.shape[:-1]))
+    scores = np.exp(clusterer.score_samples(features)) * weights
+    scores = scores.reshape(mix_stft.shape[:-1])
     sources = []
     for i in range(assignments.shape[-1]):
         mask = assignments[:, :, i]
