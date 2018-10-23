@@ -11,6 +11,7 @@ a0 = torch.randint(0,2, (batch_size, num_points))
 assignments = torch.stack([a0, 1-a0], dim=-1)
 
 def classic_deep_clustering(embeddings, assignments, weights):
+    batch_size, num_points, embedding_size = embeddings.shape
     weights = weights.view(batch_size, num_points, 1)
     embeddings = weights.expand_as(embeddings) * embeddings
     assignments = weights.expand_as(assignments) * assignments
