@@ -2,6 +2,14 @@ import numpy as np
 from sklearn.mixture import GaussianMixture
 import librosa
 
+def whiten(X, fudge=1E-18):
+    Xcov = np.dot(X.T, X)
+    d, V = np.linalg.eigh(Xcov)
+    D = np.diag(1. / np.sqrt(d + fudge))
+    W = np.dot(np.dot(V, D), V.T)
+    X_white = np.dot(X, W)
+    return X_white
+
 def transform(data, n_fft, hop_length):
     n = len(data)
     data = librosa.util.fix_length(data, n + n_fft // 2)
@@ -27,32 +35,31 @@ def multichannel_stft(mix, n_fft, hop_length):
     return np.stack(mix_stft, axis=-1), np.stack(mix_log_magnitude, axis=-1)
 
 def extract_spatial_features(mix_stft, n_fft, sr):
-    interlevel_difference = np.abs((mix_stft[:, :, 0] + 1e-8) ** 2 / (mix_stft[:, :, 1] + 1e-8)) ** 2
+    interlevel_difference = np.abs((mix_stft[:, :, 0] + 1e-8) ** 2 / (mix_stft[:, :, 1] + 1e-8) ** 2)
     interlevel_difference = 10 * np.log10(interlevel_difference + 1e-8)
 
     frequencies = np.expand_dims((2 * np.pi * librosa.core.fft_frequencies(sr=sr, n_fft=n_fft)) / float(sr), axis=0)
-    interphase_difference = np.angle(mix_stft[:, :, 0] * np.conj(mix_stft[:, :, 1])) / (frequencies + 1.0)
+    interphase_difference = np.angle(mix_stft[:, :, 1] * np.conj(mix_stft[:, :, 0])) / (frequencies + 1.0)
     return interlevel_difference, interphase_difference
 
-def gmm_spatial_clustering(mix, sr, num_sources, n_fft, hop_length, covariance_type='full', verbose=True):
+def gmm_spatial_clustering(mix, sr, num_sources, n_fft, hop_length, covariance_type='full'):
     mix_stft, mix_log_magnitude = multichannel_stft(mix, n_fft, hop_length)
-    weights = np.max(mix_log_magnitude, axis=-1).flatten() > -40
+    weights = np.max(mix_log_magnitude, axis=-1).flatten() > -50
 
     interlevel_difference, interphase_difference = extract_spatial_features(mix_stft, n_fft, sr)
     features = np.vstack([np.sin(interphase_difference).flatten(),
                           np.cos(interphase_difference).flatten()]).T
     features_fit = features[weights]
 
-    clusterer = GaussianMixture(n_components=num_sources, covariance_type=covariance_type, init_params='kmeans')
+    clusterer = GaussianMixture(n_components=num_sources,
+                                covariance_type=covariance_type,
+                                weights_init=[.5, .5])
     clusterer.fit(features_fit)
     assignments = clusterer.predict_proba(features)
     assignments = assignments.reshape(mix_stft.shape[:-1] + (-1,))
     scores = np.exp(clusterer.score_samples(features)) * weights
     scores = scores.reshape(mix_stft.shape[:-1])
-    sources = []
-    for i in range(assignments.shape[-1]):
-        mask = assignments[:, :, i]
-        source = np.vstack([mask_mixture(mask.T, mix[i], n_fft, hop_length) for i in range(mix.shape[0])])
-        sources.append(source)
 
-    return sources, clusterer.bic(features), scores
+    assignments = (assignments == assignments.max(axis=-1)) * weights.reshape(mix_stft.shape[:-1])
+
+    return assignments, clusterer.bic(features), scores

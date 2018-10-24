@@ -4,7 +4,7 @@
 mkdir -p runs
 covariance_type="diag"
 num_run=$(ls runs/ | wc -l |  tr -d ' ')
-run_id="run$num_run-$covariance_type-dc-10"
+run_id="run$num_run-$covariance_type-dc-curr"
 
 echo $model_path > model_path
 USE_DOCKER=`cat ../DOCKER`

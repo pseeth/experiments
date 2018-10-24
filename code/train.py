@@ -265,8 +265,12 @@ module = model.module if torch.cuda.device_count() > 1 else model
 utils.show_model(model)
 
 val_losses = []
+dc_weight = 11
 
 for epoch in epochs:
+    if (epoch % int(params['num_epochs'] / 10) == 0):
+        dc_weight = max(0, dc_weight - 1)
+
     if args.unfold_iterations:
         if (epoch % int(params['num_epochs'] / 5) == 0):
             n_iterations = int(params['num_epoch'] / epoch)
@@ -300,7 +304,7 @@ for epoch in epochs:
                 projected_ibms = projected_ibms.clamp(0.0, 1.0)
             else:
                 projected_ibms = source_ibms
-            loss = 10*affinity_cost(embedding, projected_ibms)
+            loss = affinity_cost(embedding, projected_ibms)
             writer.add_scalar('affinity_loss/scalar', loss, n_iter)
 
         if not args.baseline:
@@ -320,7 +324,7 @@ for epoch in epochs:
                 else:
                     projected_ibms = source_ibms
 
-                affinity_loss = 10*affinity_cost(embedding, projected_ibms)
+                affinity_loss = dc_weight*affinity_cost(embedding, projected_ibms)
                 loss += affinity_loss
 
                 writer.add_scalar('affinity_loss/scalar', affinity_loss, n_iter)
