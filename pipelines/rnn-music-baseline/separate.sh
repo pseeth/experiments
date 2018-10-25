@@ -19,7 +19,7 @@ if [ ! -d data/musdb ]; then
     fi
 
     if [ $USE_DOCKER -eq 0 ]; then
-        model_path="pipelines/em-cluster-music/runs/run$run_id"
+        model_path="pipelines/rnn-music-baseline/runs/run9"
         source activate prem
         cd ../../
         python code/separate_music.py \

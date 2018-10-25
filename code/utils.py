@@ -9,6 +9,35 @@ import shutil
 import inspect
 import librosa
 
+def weight_by_magnitude(magnitude):
+    weights = magnitude / np.sum(magnitude)
+    weights *= (magnitude.shape[0] * magnitude.shape[1])
+    return np.sqrt(weights)
+
+def source_activity_weights(source_magnitudes, threshold=-40):
+    log_magnitude = 20 * np.log10(source_magnitudes + 1e-8)
+    above_threshold = (log_magnitude - np.max(log_magnitude)) > threshold
+    return np.max(above_threshold, axis=-1).astype(np.float32)
+
+def pad_packed_collate(batch):
+    sorted_batch = sorted(batch, key=lambda x: x[0].shape[1], reverse=True)
+    max_length = sorted_batch[0][0].shape[1]
+    for i in range(len(sorted_batch)):
+        for j in range(len(sorted_batch[i]) - 1):
+            sorted_batch[i] = list(sorted_batch[i])
+            length = sorted_batch[i][j].shape[1]
+            pad_length = max_length - length
+            pad_tuple = [(0, 0) for k in range(len(sorted_batch[i][j].shape))]
+            pad_tuple[1] = (0, pad_length)
+            sorted_batch[i][j] = np.pad(sorted_batch[i][j], pad_tuple, mode='constant')
+            sorted_batch[i] = tuple(sorted_batch[i])
+    zipped_batch = list(zip(*sorted_batch))
+    zipped_batch = [np.stack(z, axis=0) for z in zipped_batch]
+    spectrogram, magnitude_spectrogram, source_spectrograms, source_ibms, one_hots = \
+        (torch.from_numpy(z) for z in zipped_batch)
+
+    return spectrogram, magnitude_spectrogram, source_spectrograms, source_ibms, one_hots
+
 def mask_mixture(mask, mix, n_fft, hop_length):
     n = len(mix)
     mix = librosa.util.fix_length(mix, n + n_fft // 2)

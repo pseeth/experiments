@@ -7,12 +7,12 @@ import argparse
 from scipy.io import wavfile
 import numpy as np
 
-def load_model(run_directory):
+def load_model(run_directory, device_target='cuda'):
     saved_model_path = os.path.join(run_directory, 'checkpoints/latest_best.h5')
     with open(os.path.join(run_directory, 'params.json'), 'r') as f:
         params = json.load(f)
 
-    device = torch.device('cuda', 1)
+    device = torch.device('cuda', 1) if device_target == 'cuda' else torch.device('cpu')
     class_func = MaskEstimation if 'baseline' in run_directory else DeepAttractor
     model = load_class_from_params(params, class_func).to(device)
 
@@ -91,12 +91,12 @@ def save_references(mixture_folder, target_directory, orig_sr=48000, target_sr=3
         source = (source*maxv).astype(np.int16)
         wavfile.write(save_path, target_sr, source.T)
 
-def run(run_directory, mixture_folder):
+def run(run_directory, mixture_folder, device_target):
     file_name = mixture_folder.split('/')[-1]
     print(file_name)
     target_directory = os.path.join(run_directory, 'output', file_name)
 
-    model, params, device = load_model(run_directory)
+    model, params, device = load_model(run_directory, device_target)
     mixture, sr = librosa.load(os.path.join(mixture_folder, 'mixture.wav'),
                                sr=params['sample_rate'],
                                mono=False)
@@ -105,20 +105,22 @@ def run(run_directory, mixture_folder):
     save_estimates(estimates,
                    target_directory,
                    orig_sr=params['sample_rate'],
-                   target_sr=48000)
+                   target_sr=32000)
 
     save_references(mixture_folder,
                     target_directory,
                     orig_sr=params['sample_rate'],
-                    target_sr=48000)
+                    target_sr=32000)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_directory")
     parser.add_argument("--mixture_folder")
     args = parser.parse_args()
-
-    run(args.run_directory, args.mixture_folder)
+    try:
+        run(args.run_directory, args.mixture_folder, 'cuda')
+    except:
+        run(args.run_directory, args.mixture_folder, 'cpu')
 
 
 

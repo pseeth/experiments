@@ -17,12 +17,8 @@ def zip_directory(directory, zipname):
 def zip_directories(output_directory):
     folders = [os.path.join(output_directory, x) for x in os.listdir(output_directory)]
     for folder in folders:
+        print(folder)
         zip_directory(folder, folder + '.zip')
-
-def upload_zips_to_cloud(output_directory, provider):
-    if provider == 'aws':
-        return
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

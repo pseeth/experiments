@@ -4,6 +4,16 @@ metadata:
   publication_type: article
   upload_type: publication
 pipelines:
+  analyze-music:
+    envs:
+      host:
+        args: []
+    parameters: []
+    path: pipelines/analyze-music
+    requirements: {}
+    stages:
+    - setup
+    - analyze
   create-docker-environment:
     envs:
       host:
@@ -22,7 +32,6 @@ pipelines:
     stages:
     - build-conda-environment
   em-cluster-music:
-    timeout: 0
     envs:
       host:
         args: []
@@ -31,6 +40,7 @@ pipelines:
     - train
     - separate
     - evaluate
+    timeout: 0
   prepare-music-data:
     envs:
       host:
@@ -40,6 +50,7 @@ pipelines:
     - prepare-musdb
     - generate-dataset
     - move-dataset
+    timeout: 0
   rnn-music-baseline:
     envs:
       host:
@@ -49,6 +60,7 @@ pipelines:
     - train
     - separate
     - evaluate
+    timeout: 0
 popperized:
 - github/popperized
 version: 1

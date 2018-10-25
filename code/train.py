@@ -5,6 +5,7 @@ from networks import DeepAttractor, MaskEstimation
 import utils
 from loss import *
 from dataset import ScaperLoader
+from wsj_dataset import WSJ0
 from tqdm import trange, tqdm
 from tensorboardX import SummaryWriter
 import numpy as np
@@ -27,6 +28,7 @@ parser.add_argument("--model_name", default='model')
 parser.add_argument("--log_dir", default=None)
 parser.add_argument("--training_folder", default='/mm1/seetharaman/generated/speech/two_speaker/training')
 parser.add_argument("--validation_folder", default='/mm1/seetharaman/generated/speech/two_speaker/validation')
+parser.add_argument("--dataset_type", default='scaper')
 parser.add_argument("--n_clusters", default=2)
 parser.add_argument("--checkpoint", default=None)
 parser.add_argument("--disable-training-stats", action='store_true')
@@ -92,6 +94,7 @@ params = {
     'target_type': args.target_type,
     'training_folder': args.training_folder.split(':'),
     'validation_folder': args.validation_folder,
+    'dataset_type': args.dataset_type,
     'checkpoint': args.checkpoint,
     'loss_function': args.loss_function,
     'attractor_loss_function': args.attractor_loss_function,
@@ -143,35 +146,67 @@ args.log_dir = writer.file_writer.get_logdir()
 os.makedirs(os.path.join(args.log_dir, 'checkpoints'), exist_ok=True)
 
 dataset = []
-for i in range(len(params['training_folder'])):
-    dataset.append(ScaperLoader(folder=params['training_folder'][i], 
-                           length=params['initial_length'], 
-                           n_fft=params['n_fft'], 
-                           hop_length=params['hop_length'], 
-                           output_type=params['target_type'],
-                           group_sources=params['group_sources'],
-                           ignore_sources=params['ignore_sources'],
-                           source_labels=params['source_labels']))
+if params['dataset_type'] == 'scaper':
+    for i in range(len(params['training_folder'])):
+        dataset.append(ScaperLoader(folder=params['training_folder'][i],
+                               length=params['initial_length'],
+                               n_fft=params['n_fft'],
+                               hop_length=params['hop_length'],
+                               output_type=params['target_type'],
+                               group_sources=params['group_sources'],
+                               ignore_sources=params['ignore_sources'],
+                               source_labels=params['source_labels']))
 
-dataset = ConcatDataset(dataset) if len(dataset) > 1 else dataset[0]
+    dataset = ConcatDataset(dataset) if len(dataset) > 1 else dataset[0]
 
-val_dataset = ScaperLoader(folder=params['validation_folder'], 
-                           length=params['initial_length'], 
-                           n_fft=params['n_fft'], 
-                           hop_length=params['hop_length'], 
-                           output_type=params['target_type'],
-                           group_sources=params['group_sources'],
-                           ignore_sources=params['ignore_sources'],
-                           source_labels=params['source_labels'])
+    if args.sample_strategy == 'sequential':
+        sample_strategy = sampler.SequentialSampler(dataset)
+    elif args.sample_strategy == 'random':
+        sample_strategy = sampler.RandomSampler(dataset)
 
-if args.sample_strategy == 'sequential':
-    sample_strategy = sampler.SequentialSampler(dataset)
-elif args.sample_strategy == 'random':
-    sample_strategy = sampler.RandomSampler(dataset)
-    
-dataloader = DataLoader(dataset, batch_size=params['batch_size'], num_workers=params['num_workers'], sampler=sample_strategy)
+    val_dataset = ScaperLoader(folder=params['validation_folder'],
+                               length=params['initial_length'],
+                               n_fft=params['n_fft'],
+                               hop_length=params['hop_length'],
+                               output_type=params['target_type'],
+                               group_sources=params['group_sources'],
+                               ignore_sources=params['ignore_sources'],
+                               source_labels=params['source_labels'])
+    dataloader = DataLoader(dataset,
+                            batch_size=params['batch_size'],
+                            num_workers=params['num_workers'],
+                            sampler=sample_strategy)
+
+elif params['dataset_type'] == 'wsj':
+    for i in range(len(params['training_folder'])):
+        dataset.append(WSJ0(folder=params['training_folder'][i],
+                            length=params['initial_length'],
+                            n_fft=params['n_fft'],
+                            hop_length=params['hop_length'],
+                            output_type=params['target_type'],
+                            num_channels=1))
+
+    dataset = ConcatDataset(dataset) if len(dataset) > 1 else dataset[0]
+
+    if args.sample_strategy == 'sequential':
+        sample_strategy = sampler.SequentialSampler(dataset)
+    elif args.sample_strategy == 'random':
+        sample_strategy = sampler.RandomSampler(dataset)
+
+    val_dataset = WSJ0(folder=params['validation_folder'],
+                       length=params['initial_length'],
+                       n_fft=params['n_fft'],
+                       hop_length=params['hop_length'],
+                       output_type=params['target_type'],
+                       num_channels=1)
+    dataloader = DataLoader(dataset,
+                            batch_size=params['batch_size'],
+                            num_workers=params['num_workers'],
+                            sampler=sample_strategy,
+                            collate_fn=utils.pad_packed_collate)
 
 dummy_input, _, _, _, dummy_one_hot = dataset[0]
+
 params['num_attractors'] = dummy_one_hot.shape[-1]
 params['num_sources'] = params['num_attractors']
 params['sample_rate'] = dataset.sr
@@ -265,12 +300,9 @@ module = model.module if torch.cuda.device_count() > 1 else model
 utils.show_model(model)
 
 val_losses = []
-dc_weight = 11
+dc_weight = 1
 
 for epoch in epochs:
-    if (epoch % int(params['num_epochs'] / 10) == 0):
-        dc_weight = max(0, dc_weight - 1)
-
     if args.unfold_iterations:
         if (epoch % int(params['num_epochs'] / 5) == 0):
             n_iterations = int(params['num_epoch'] / epoch)

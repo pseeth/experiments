@@ -8,6 +8,7 @@ class WSJ0(Dataset):
         self.folder = folder
         self.wav_files = sorted([x for x in os.listdir(os.path.join(folder, 'mix')) if '.wav' in x])
         self.speaker_folders = sorted([x for x in os.listdir(folder) if 's' in x])
+        self.num_speakers = len(self.speaker_folders)
 
         self.n_fft = n_fft
         self.hop_length = hop_length
@@ -32,7 +33,7 @@ class WSJ0(Dataset):
         input_data, mix_magnitude, source_magnitudes, source_ibm = self.construct_input_output(mix, sources)
         if self.whiten_data:
             input_data = self.whiten(input_data)
-        return input_data, mix_magnitude, source_magnitudes, source_ibm, 0
+        return input_data, mix_magnitude, source_magnitudes, source_ibm, np.eye(self.num_speakers)
 
     def whiten(self, data):
         if self.stats is None:

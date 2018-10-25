@@ -1,12 +1,13 @@
 import torch
 import numpy as np
+from loss import affinity_cost
 
 # Make some random data to test deep clustering
 batch_size=5
 num_points=30
 embedding_size=8
 embeddings = torch.rand(batch_size, num_points, embedding_size)
-weights = torch.rand(batch_size, num_points)
+weights = torch.ones(batch_size, num_points)
 a0 = torch.randint(0,2, (batch_size, num_points))
 assignments = torch.stack([a0, 1-a0], dim=-1)
 
@@ -15,7 +16,6 @@ def classic_deep_clustering(embeddings, assignments, weights):
     weights = weights.view(batch_size, num_points, 1)
     embeddings = weights.expand_as(embeddings) * embeddings
     assignments = weights.expand_as(assignments) * assignments
-    
     # -- get normalization factor (normalize by sum over all applied weights)
     # See (7) from ALTERNATIVE OBJECTIVE FUNCTIONS FOR DEEP CLUSTERING, Wang et al, 2017
     # for how to apply weights.  Innermost square() because we're working with sqrt weights
@@ -26,12 +26,12 @@ def classic_deep_clustering(embeddings, assignments, weights):
     assignments_transpose = assignments.transpose(2, 1)
     
     vTv = torch.matmul(embeddings_transpose, embeddings)
-    vTy = torch.matmul(assignments_transpose, assignments)
+    vTy = torch.matmul(embeddings_transpose, assignments)
     yTy = torch.matmul(assignments_transpose, assignments)
-    return (torch.sum(vTv**2) - 2*torch.sum(vTy**2) + torch.sum(yTy**2)) / count 
+    return (torch.sum(vTv**2) - 2*torch.sum(vTy**2) + torch.sum(yTy**2)) / count
 
-L = classic_deep_clustering(embeddings, assignments, weights)
-
+print(classic_deep_clustering(embeddings, assignments, weights))
+print(affinity_cost(embeddings, assignments, weights))
 
 # These functions should move to the dataloader
 def get_mag_weight_Rsqrt(mag):

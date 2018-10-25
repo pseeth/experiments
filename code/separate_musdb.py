@@ -12,4 +12,7 @@ if __name__ == '__main__':
 
     for track in tracks:
         print(track)
-        separate_music.run(args.run_directory, track)
+        try:
+            separate_music.run(args.run_directory, track, 'cuda')
+        except:
+            separate_music.run(args.run_directory, track, 'cpu')

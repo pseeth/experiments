@@ -2,9 +2,9 @@
 # [wf] execute train stage
 
 mkdir -p runs
-covariance_type="diag"
+covariance_type="tied_spherical"
 num_run=$(ls runs/ | wc -l |  tr -d ' ')
-run_id="run$num_run-$covariance_type-dc-curr"
+run_id="run-$covariance_type-l1-dc"
 
 echo $model_path > model_path
 USE_DOCKER=`cat ../DOCKER`
