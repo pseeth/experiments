@@ -6,6 +6,7 @@ import numpy as np
 import scaper
 import random
 import sox
+import utils
 
 class ScaperLoader(Dataset):
     def __init__(self, folder, length = 1.0, n_fft=512, hop_length=128, sr=None, output_type='psa', group_sources=[], ignore_sources=[], source_labels=[]):
@@ -49,7 +50,7 @@ class ScaperLoader(Dataset):
         input_data, mix_magnitude, source_magnitudes, source_ibm = self.construct_input_output(mix, sources)
         if self.whiten_data:
             input_data = self.whiten(input_data)
-        return input_data, mix_magnitude, source_magnitudes, source_ibm, one_hots
+        return input_data, mix_magnitude, source_magnitudes, source_ibm, None, one_hots
 
     def whiten(self, data):
         if self.stats is None:
@@ -100,7 +101,7 @@ class ScaperLoader(Dataset):
         return mix_log_magnitude, mix_magnitude, source_magnitudes, source_ibm
 
     def load_jam_file(self, jam_file):
-        mix, sr = librosa.load(jam_file[:-4] + 'wav', sr=self.sr)
+        mix, sr = utils.load_audio(jam_file[:-4] + 'wav')
         
         jam = jams.load(jam_file)
         data = jam.annotations[0]['data']['value']            
@@ -116,7 +117,7 @@ class ScaperLoader(Dataset):
             if d['role'] == 'foreground':
                 source_path = d['saved_source_file']
                 source_path = os.path.join(self.folder, source_path.split('/')[-1])
-                sources.append(librosa.load(source_path, sr=self.sr)[0])
+                sources.append(utils.load_audio(source_path)[0])
                 one_hot = np.zeros(len(classes))
                 one_hot[self.source_indices[d['label']]] = 1
                 used_classes.append(d['label'])

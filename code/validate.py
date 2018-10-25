@@ -21,7 +21,9 @@ def validate(model, dset, writer, n_iter, params, device, loss_function, num_val
 
             spectrogram = torch.from_numpy(spectrogram).unsqueeze(0).requires_grad_().to(device)
             one_hots = torch.from_numpy(one_hots).unsqueeze(0).float().requires_grad_().to(device)
+            model.clusterer.n_iterations = 5
             masks = model(spectrogram, one_hots)[0].cpu().squeeze(0).data.numpy()
+            model.clusterer.n_iterations = 0
 
             for j in range(0, masks.shape[-1]):
                 mask = masks[:, :, j]
@@ -57,21 +59,25 @@ def validate(model, dset, writer, n_iter, params, device, loss_function, num_val
 
             writer.add_image('spectrograms/summary', torch.from_numpy(summary_image), n_iter)
 
-        dset_loader = DataLoader(dset, batch_size=params['batch_size'], num_workers=params['num_workers'])
+        dset_loader = DataLoader(dset,
+                                 batch_size=params['batch_size'],
+                                 num_workers=params['num_workers'])
         progress_bar = trange(len(dset_loader))
         val_loss = []
 
-        for (spectrogram, magnitude_spectrogram, source_spectrograms, source_ibms, one_hots) in dset_loader:
+        for (spectrogram, magnitude_spectrogram, source_spectrograms, source_ibms, weights, one_hots) in dset_loader:
             spectrogram = spectrogram.to(device).requires_grad_()
             magnitude_spectrogram = magnitude_spectrogram.to(device).unsqueeze(-1).requires_grad_()
             source_spectrograms = source_spectrograms.float().to(device)
             source_ibms = source_ibms.to(device)
             one_hots = one_hots.float().to(device).requires_grad_()
 
-            source_masks = model(spectrogram, one_hots)[0]
-
-            source_estimates = source_masks * magnitude_spectrogram
-            loss = loss_function(source_estimates, source_spectrograms)
+            source_masks, attractors, embedding, log_likelihoods = model(spectrogram, one_hots)
+            if params['loss_function'] == 'dc':
+                loss = loss_function(embedding, source_ibms, weights)
+            else:
+                source_estimates = source_masks * magnitude_spectrogram
+                loss = loss_function(source_estimates, source_spectrograms)
 
             progress_bar.set_description(str(loss.item()))
             progress_bar.update(1)

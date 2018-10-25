@@ -2,17 +2,19 @@ from torch.utils.data import Dataset
 import librosa
 import os
 import numpy as np
+import utils
+from scipy.io import wavfile
 
 class WSJ0(Dataset):
-    def __init__(self, folder, length = 1.0, n_fft=512, hop_length=128, sr=None, num_channels=2, output_type='psa'):
+    def __init__(self, folder, length=400, n_fft=512, hop_length=128, sr=None, num_channels=2, output_type='psa'):
         self.folder = folder
         self.wav_files = sorted([x for x in os.listdir(os.path.join(folder, 'mix')) if '.wav' in x])
         self.speaker_folders = sorted([x for x in os.listdir(folder) if 's' in x])
         self.num_speakers = len(self.speaker_folders)
+        self.target_length = int(length)
 
         self.n_fft = n_fft
         self.hop_length = hop_length
-        self.length = length
         self.sr = sr
         self.output_type = output_type
         self.stats = None
@@ -30,10 +32,34 @@ class WSJ0(Dataset):
     def __getitem__(self, i):
         wav_file = self.wav_files[i]
         mix, sources = self.load_wsj_mix(wav_file)
-        input_data, mix_magnitude, source_magnitudes, source_ibm = self.construct_input_output(mix, sources)
+        input_data, mix_magnitude, source_magnitudes, source_ibm, weights = self.construct_input_output(mix, sources)
         if self.whiten_data:
             input_data = self.whiten(input_data)
-        return input_data, mix_magnitude, source_magnitudes, source_ibm, np.eye(self.num_speakers)
+        data_list = self.get_target_length_and_transpose([input_data, mix_magnitude, source_magnitudes, source_ibm, weights],
+                                                     self.target_length)
+        input_data, mix_magnitude, source_magnitudes, source_ibm, weights = tuple(data_list)
+        return input_data, mix_magnitude, source_magnitudes, source_ibm, weights, np.eye(self.num_speakers)
+
+    def get_target_length_and_transpose(self, data_list, target_length):
+        length = data_list[0].shape[1]
+        if length > target_length:
+            offset = np.random.randint(0, length - target_length)
+        else:
+            offset = 0
+
+        for i, data in enumerate(data_list):
+            pad_length = max(target_length - length, 0)
+            pad_tuple = [(0, 0) for k in range(len(data.shape))]
+            pad_tuple[1] = (0, pad_length)
+            data_list[i] = np.pad(data, pad_tuple, mode='constant')
+
+            if self.num_channels == 1:
+                data_list[i] = data_list[i][:, offset:offset + target_length, 0]
+            else:
+                data_list[i] = data_list[i][:, offset:offset + target_length, :self.num_channels]
+            data_list[i] = np.swapaxes(data_list[i], 0, 1)
+
+        return data_list
 
     def whiten(self, data):
         if self.stats is None:
@@ -77,7 +103,9 @@ class WSJ0(Dataset):
         if self.output_type == 'ibm':
             source_magnitudes = np.expand_dims(mix_magnitude, axis=-1) * source_ibm
 
-        return mix_log_magnitude, mix_magnitude, source_magnitudes, source_ibm
+        weights = utils.magnitude_weights(mix_magnitude)
+
+        return mix_log_magnitude, mix_magnitude, source_magnitudes, source_ibm, weights
 
     def load_wsj_mix(self, wav_file):
         sources = []
@@ -89,16 +117,12 @@ class WSJ0(Dataset):
             speaker_path = os.path.join(self.folder, speaker, wav_file)
             mix_path = os.path.join(self.folder, 'mix', wav_file)
 
-            mix, _ = librosa.load(mix_path, sr=self.sr, mono=False)
-            source, _ = librosa.load(speaker_path, sr=self.sr, mono=False)
+            mix, _ = utils.load_audio(mix_path)
+            source, _ = utils.load_audio(speaker_path)
 
             mix = mix[channel_indices]
             source = source[channel_indices]
             sources.append(source)
-        
-        length_cutoff = int(mix.shape[0]*self.length)
-        mix = mix[:length_cutoff]
-        sources = [source[:length_cutoff] for source in sources]
 
         return mix, sources
 
@@ -121,7 +145,7 @@ class WSJ0(Dataset):
         import matplotlib.pyplot as plt
         from audio_embed import utilities
 
-        input_data, mix_magnitude, output_data, _, _ = self[i]
+        input_data, mix_magnitude, output_data, _, _, _ = self[i]
 
         plt.style.use('dark_background')
         plt.figure(figsize=(20, 5))

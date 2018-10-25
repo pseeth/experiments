@@ -158,12 +158,6 @@ if params['dataset_type'] == 'scaper':
                                source_labels=params['source_labels']))
 
     dataset = ConcatDataset(dataset) if len(dataset) > 1 else dataset[0]
-
-    if args.sample_strategy == 'sequential':
-        sample_strategy = sampler.SequentialSampler(dataset)
-    elif args.sample_strategy == 'random':
-        sample_strategy = sampler.RandomSampler(dataset)
-
     val_dataset = ScaperLoader(folder=params['validation_folder'],
                                length=params['initial_length'],
                                n_fft=params['n_fft'],
@@ -172,11 +166,6 @@ if params['dataset_type'] == 'scaper':
                                group_sources=params['group_sources'],
                                ignore_sources=params['ignore_sources'],
                                source_labels=params['source_labels'])
-    dataloader = DataLoader(dataset,
-                            batch_size=params['batch_size'],
-                            num_workers=params['num_workers'],
-                            sampler=sample_strategy)
-
 elif params['dataset_type'] == 'wsj':
     for i in range(len(params['training_folder'])):
         dataset.append(WSJ0(folder=params['training_folder'][i],
@@ -187,25 +176,24 @@ elif params['dataset_type'] == 'wsj':
                             num_channels=1))
 
     dataset = ConcatDataset(dataset) if len(dataset) > 1 else dataset[0]
-
-    if args.sample_strategy == 'sequential':
-        sample_strategy = sampler.SequentialSampler(dataset)
-    elif args.sample_strategy == 'random':
-        sample_strategy = sampler.RandomSampler(dataset)
-
     val_dataset = WSJ0(folder=params['validation_folder'],
                        length=params['initial_length'],
                        n_fft=params['n_fft'],
                        hop_length=params['hop_length'],
                        output_type=params['target_type'],
                        num_channels=1)
-    dataloader = DataLoader(dataset,
+
+if args.sample_strategy == 'sequential':
+    sample_strategy = sampler.SequentialSampler(dataset)
+elif args.sample_strategy == 'random':
+    sample_strategy = sampler.RandomSampler(dataset)
+
+dataloader = DataLoader(dataset,
                             batch_size=params['batch_size'],
                             num_workers=params['num_workers'],
-                            sampler=sample_strategy,
-                            collate_fn=utils.pad_packed_collate)
+                            sampler=sample_strategy)
 
-dummy_input, _, _, _, dummy_one_hot = dataset[0]
+dummy_input, _, _, _, _, dummy_one_hot = dataset[0]
 
 params['num_attractors'] = dummy_one_hot.shape[-1]
 params['num_sources'] = params['num_attractors']
@@ -278,7 +266,7 @@ elif 'weighted_l1' in params['loss_function']:
     l1_loss = nn.L1Loss()
     loss_function = WeightedL1Loss(loss_function=l1_loss)
 elif params['loss_function'] == 'dc':
-    loss_function = affinity_loss
+    loss_function = affinity_cost
 
 if params['attractor_loss_function'] == 'none':
     attractor_loss_function = None
@@ -316,12 +304,14 @@ for epoch in epochs:
                 
     progress_bar = trange(num_iterations)
     epoch_loss = []
-    for (spectrogram, magnitude_spectrogram, source_spectrograms, source_ibms, one_hots) in dataloader:
+    for (spectrogram, magnitude_spectrogram, source_spectrograms, source_ibms, weights, one_hots) in dataloader:
         spectrogram = spectrogram.to(device).requires_grad_()
         magnitude_spectrogram = magnitude_spectrogram.to(device).unsqueeze(-1).requires_grad_()
         source_spectrograms = source_spectrograms.float().to(device)
         source_ibms = source_ibms.to(device).float()
         one_hots = one_hots.float().to(device).requires_grad_()
+        if weights is not None:
+            weights = weights.float().to(device)
         
         optimizer.zero_grad()
         source_masks, attractors, embedding, log_likelihoods = model(spectrogram, one_hots)
@@ -336,7 +326,7 @@ for epoch in epochs:
                 projected_ibms = projected_ibms.clamp(0.0, 1.0)
             else:
                 projected_ibms = source_ibms
-            loss = affinity_cost(embedding, projected_ibms)
+            loss = affinity_cost(embedding, projected_ibms, weights)
             writer.add_scalar('affinity_loss/scalar', loss, n_iter)
 
         if not args.baseline:
@@ -356,7 +346,7 @@ for epoch in epochs:
                 else:
                     projected_ibms = source_ibms
 
-                affinity_loss = dc_weight*affinity_cost(embedding, projected_ibms)
+                affinity_loss = dc_weight*affinity_cost(embedding, projected_ibms, weights)
                 loss += affinity_loss
 
                 writer.add_scalar('affinity_loss/scalar', affinity_loss, n_iter)

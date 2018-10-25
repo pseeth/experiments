@@ -8,9 +8,10 @@ import pandas as pd
 import shutil
 import inspect
 import librosa
+from scipy.io import wavfile
 
-def weight_by_magnitude(magnitude):
-    weights = magnitude / np.sum(magnitude)
+def magnitude_weights(magnitude):
+    weights = magnitude / (np.sum(magnitude) + 1e-6)
     weights *= (magnitude.shape[0] * magnitude.shape[1])
     return np.sqrt(weights)
 
@@ -19,24 +20,39 @@ def source_activity_weights(source_magnitudes, threshold=-40):
     above_threshold = (log_magnitude - np.max(log_magnitude)) > threshold
     return np.max(above_threshold, axis=-1).astype(np.float32)
 
-def pad_packed_collate(batch):
+def load_audio(file_path):
+    rate, audio = wavfile.read(file_path)
+    if len(audio.shape) == 1:
+        audio = np.expand_dims(audio, axis=-1)
+    audio = audio.astype(np.float32, order='C') / 32768.0
+    return audio.T, rate
+
+def pad_packed_collate(batch, target_length=400, num_channels=1):
     sorted_batch = sorted(batch, key=lambda x: x[0].shape[1], reverse=True)
-    max_length = sorted_batch[0][0].shape[1]
     for i in range(len(sorted_batch)):
+        length = sorted_batch[i][0].shape[1]
+        if length > target_length:
+            offset = np.random.randint(0, length - target_length)
+        else:
+            offset = 0
         for j in range(len(sorted_batch[i]) - 1):
             sorted_batch[i] = list(sorted_batch[i])
-            length = sorted_batch[i][j].shape[1]
-            pad_length = max_length - length
+            pad_length = max(target_length - length, 0)
             pad_tuple = [(0, 0) for k in range(len(sorted_batch[i][j].shape))]
             pad_tuple[1] = (0, pad_length)
             sorted_batch[i][j] = np.pad(sorted_batch[i][j], pad_tuple, mode='constant')
+            if num_channels == 1:
+                sorted_batch[i][j] = sorted_batch[i][j][:, offset:offset+target_length, 0]
+            else:
+                sorted_batch[i][j] = sorted_batch[i][j][:, offset:offset + target_length, :num_channels]
             sorted_batch[i] = tuple(sorted_batch[i])
+
     zipped_batch = list(zip(*sorted_batch))
     zipped_batch = [np.stack(z, axis=0) for z in zipped_batch]
-    spectrogram, magnitude_spectrogram, source_spectrograms, source_ibms, one_hots = \
-        (torch.from_numpy(z) for z in zipped_batch)
+    spectrogram, magnitude_spectrogram, source_spectrograms, source_ibms, weights, one_hots = \
+        (torch.from_numpy(z).transpose(2, 1) for z in zipped_batch)
 
-    return spectrogram, magnitude_spectrogram, source_spectrograms, source_ibms, one_hots
+    return spectrogram, magnitude_spectrogram, source_spectrograms, source_ibms, weights, one_hots
 
 def mask_mixture(mask, mix, n_fft, hop_length):
     n = len(mix)

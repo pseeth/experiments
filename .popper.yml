@@ -61,6 +61,17 @@ pipelines:
     - separate
     - evaluate
     timeout: 0
+  wsj-deep-clustering:
+    envs:
+      host:
+        args: []
+    parameters: []
+    path: pipelines/wsj-deep-clustering
+    requirements: {}
+    stages:
+    - train
+    - separate
+    - evaluate
 popperized:
 - github/popperized
 version: 1

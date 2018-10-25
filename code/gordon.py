@@ -7,7 +7,7 @@ batch_size=5
 num_points=30
 embedding_size=8
 embeddings = torch.rand(batch_size, num_points, embedding_size)
-weights = torch.ones(batch_size, num_points)
+weights = torch.rand(batch_size, num_points)
 a0 = torch.randint(0,2, (batch_size, num_points))
 assignments = torch.stack([a0, 1-a0], dim=-1)
 
