@@ -29,6 +29,8 @@ if [ ! -d data/wsj0-mix/2speakers_anechoic/ ]; then
             --validation_folder "/experiment/data/wsj0-mix/$dataset/wav8k/min/cv/" \
             --dataset_type wsj \
             --loss_function dc \
+            --embedding_activation sigmoid \
+            --normalize_embeddings \
             --target_type psa \
             --disable-training-stats \
             --n_fft 256 \
