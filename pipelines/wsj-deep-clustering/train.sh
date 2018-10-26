@@ -35,13 +35,13 @@ if [ ! -d data/wsj0-mix/2speakers_anechoic/ ]; then
             --hop_length 64 \
             --hidden_size 300 \
             --num_layers 4 \
-            --num_epochs 1 \
+            --num_epochs 100 \
             --batch_size 20 \
             --clustering_type gmm \
             --covariance_type $covariance_type \
             --num_clustering_iterations 0 \
             --embedding_size 15 \
-            --learning_rate 2e-4 \
+            --learning_rate 1e-3 \
             --initial_length 400 \
             --projection_size 0 \
             --num_workers 10 \

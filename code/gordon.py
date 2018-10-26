@@ -3,7 +3,7 @@ import numpy as np
 from loss import affinity_cost
 
 # Make some random data to test deep clustering
-batch_size=5
+batch_size=20
 num_points=30
 embedding_size=8
 embeddings = torch.rand(batch_size, num_points, embedding_size)

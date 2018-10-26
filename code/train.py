@@ -177,7 +177,7 @@ elif params['dataset_type'] == 'wsj':
 
     dataset = ConcatDataset(dataset) if len(dataset) > 1 else dataset[0]
     val_dataset = WSJ0(folder=params['validation_folder'],
-                       length=params['initial_length'],
+                       length='full',
                        n_fft=params['n_fft'],
                        hop_length=params['hop_length'],
                        output_type=params['target_type'],

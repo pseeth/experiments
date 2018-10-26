@@ -11,9 +11,12 @@ def validate(model, dset, writer, n_iter, params, device, loss_function, num_val
     with torch.no_grad():
         for sample in sample_indices:
             n_iter += int(n_iter / num_validation + 1)
-            mix, sources, one_hots = dset.load_jam_file(dset.jam_files[sample])
-            spectrogram, magnitude_spectrogram, source_spectrograms, source_ibm = dset.construct_input_output(mix, sources)
-            spectrogram = dset.whiten(spectrogram)
+            mix, sources, one_hots = dset.load_audio_files(dset.files[sample])
+            if len(mix.shape) > 1:
+                mix = mix[0]
+                sources = [source[0] for source in sources]
+
+            spectrogram, magnitude_spectrogram, source_spectrograms, source_ibm, weights, one_hots = dset[sample]
             num_frequencies = spectrogram.shape[-1]
 
             original_shape = spectrogram.shape
@@ -21,9 +24,13 @@ def validate(model, dset, writer, n_iter, params, device, loss_function, num_val
 
             spectrogram = torch.from_numpy(spectrogram).unsqueeze(0).requires_grad_().to(device)
             one_hots = torch.from_numpy(one_hots).unsqueeze(0).float().requires_grad_().to(device)
-            model.clusterer.n_iterations = 5
-            masks = model(spectrogram, one_hots)[0].cpu().squeeze(0).data.numpy()
-            model.clusterer.n_iterations = 0
+
+            if params['loss_function'] == 'dc':
+                model.clusterer.n_iterations = 5
+                masks = model(spectrogram, None)[0].cpu().squeeze(0).data.numpy()
+                model.clusterer.n_iterations = 0
+            else:
+                masks = model(spectrogram, one_hots)[0].cpu().squeeze(0).data.numpy()
 
             for j in range(0, masks.shape[-1]):
                 mask = masks[:, :, j]
@@ -62,6 +69,8 @@ def validate(model, dset, writer, n_iter, params, device, loss_function, num_val
         dset_loader = DataLoader(dset,
                                  batch_size=params['batch_size'],
                                  num_workers=params['num_workers'])
+        if params['dataset_type'] == 'wsj':
+            dset.target_length = int(params['initial_length'])
         progress_bar = trange(len(dset_loader))
         val_loss = []
 
@@ -69,8 +78,10 @@ def validate(model, dset, writer, n_iter, params, device, loss_function, num_val
             spectrogram = spectrogram.to(device).requires_grad_()
             magnitude_spectrogram = magnitude_spectrogram.to(device).unsqueeze(-1).requires_grad_()
             source_spectrograms = source_spectrograms.float().to(device)
-            source_ibms = source_ibms.to(device)
+            source_ibms = source_ibms.to(device).float()
             one_hots = one_hots.float().to(device).requires_grad_()
+            if weights is not None:
+                weights = weights.float().to(device)
 
             source_masks, attractors, embedding, log_likelihoods = model(spectrogram, one_hots)
             if params['loss_function'] == 'dc':
@@ -83,6 +94,8 @@ def validate(model, dset, writer, n_iter, params, device, loss_function, num_val
             progress_bar.update(1)
             val_loss.append(loss.item())
 
+        if params['dataset_type'] == 'wsj':
+            dset.target_length = 'full'
         val_loss = np.mean(val_loss)
     model.train()
 

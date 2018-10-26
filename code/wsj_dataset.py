@@ -8,10 +8,10 @@ from scipy.io import wavfile
 class WSJ0(Dataset):
     def __init__(self, folder, length=400, n_fft=512, hop_length=128, sr=None, num_channels=2, output_type='psa'):
         self.folder = folder
-        self.wav_files = sorted([x for x in os.listdir(os.path.join(folder, 'mix')) if '.wav' in x])
+        self.files = sorted([x for x in os.listdir(os.path.join(folder, 'mix')) if '.wav' in x])
         self.speaker_folders = sorted([x for x in os.listdir(folder) if 's' in x])
         self.num_speakers = len(self.speaker_folders)
-        self.target_length = int(length)
+        self.target_length = int(length) if length != 'full' else 'full'
 
         self.n_fft = n_fft
         self.hop_length = hop_length
@@ -21,27 +21,29 @@ class WSJ0(Dataset):
         self.whiten_data = False
         self.num_channels = num_channels
 
-        wav_file = os.path.join(self.folder, 'mix', self.wav_files[0])
+        wav_file = os.path.join(self.folder, 'mix', self.files[0])
         mix, self.sr = librosa.load(wav_file, sr=self.sr, mono=False)
         self.channels_in_mix = mix.shape[0] if mix.shape[0] < 8 else int(mix.shape[0] / 2)
 
 
     def __len__(self):
-        return len(self.wav_files)
+        return len(self.files)
 
     def __getitem__(self, i):
-        wav_file = self.wav_files[i]
-        mix, sources = self.load_wsj_mix(wav_file)
+        wav_file = self.files[i]
+        mix, sources, one_hots = self.load_audio_files(wav_file)
         input_data, mix_magnitude, source_magnitudes, source_ibm, weights = self.construct_input_output(mix, sources)
         if self.whiten_data:
             input_data = self.whiten(input_data)
         data_list = self.get_target_length_and_transpose([input_data, mix_magnitude, source_magnitudes, source_ibm, weights],
                                                      self.target_length)
         input_data, mix_magnitude, source_magnitudes, source_ibm, weights = tuple(data_list)
-        return input_data, mix_magnitude, source_magnitudes, source_ibm, weights, np.eye(self.num_speakers)
+        return input_data, mix_magnitude, source_magnitudes, source_ibm, weights, one_hots
 
     def get_target_length_and_transpose(self, data_list, target_length):
         length = data_list[0].shape[1]
+        if target_length == 'full':
+            target_length = length
         if length > target_length:
             offset = np.random.randint(0, length - target_length)
         else:
@@ -107,7 +109,7 @@ class WSJ0(Dataset):
 
         return mix_log_magnitude, mix_magnitude, source_magnitudes, source_ibm, weights
 
-    def load_wsj_mix(self, wav_file):
+    def load_audio_files(self, wav_file):
         sources = []
         channel_indices = np.arange(self.channels_in_mix)
         np.random.shuffle(channel_indices)
@@ -124,7 +126,7 @@ class WSJ0(Dataset):
             source = source[channel_indices]
             sources.append(source)
 
-        return mix, sources
+        return mix, sources, np.eye(self.num_speakers)
 
     @staticmethod
     def transform(data, n_fft, hop_length):
@@ -153,7 +155,7 @@ class WSJ0(Dataset):
         plt.colorbar()
         plt.show()
 
-        mix, sources = self.load_wsj_mix(self.wav_files[i])
+        mix, sources, _ = self.load_audio_files(self.files[i])
         print('Mixture')
         utilities.audio(mix.T, self.sr, ext='.wav')
         for j, source in enumerate(sources):

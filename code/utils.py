@@ -11,9 +11,9 @@ import librosa
 from scipy.io import wavfile
 
 def magnitude_weights(magnitude):
-    weights = magnitude / (np.sum(magnitude) + 1e-6)
+    weights = magnitude / (np.sum(magnitude))
     weights *= (magnitude.shape[0] * magnitude.shape[1])
-    return np.sqrt(weights)
+    return np.sqrt(weights + 1e-7)
 
 def source_activity_weights(source_magnitudes, threshold=-40):
     log_magnitude = 20 * np.log10(source_magnitudes + 1e-8)

@@ -23,10 +23,10 @@ def affinity_cost(embedding, assignments, weights=None):
     embedding = embedding.view(-1, embedding_size)
     assignments = assignments.view(-1, num_sources)
 
-    silence_mask = torch.sum(assignments.detach(), dim=-1, keepdim=True)
-    embedding = silence_mask * embedding
-
     if weights is None:
+        silence_mask = torch.sum(assignments.detach(), dim=-1, keepdim=True)
+        embedding = silence_mask * embedding
+
         class_weights = nn.functional.normalize(torch.sum(assignments.detach(), dim=-2),
                                                 p=1,
                                                 dim=-1).unsqueeze(0)
@@ -50,7 +50,7 @@ def affinity_cost(embedding, assignments, weights=None):
     loss_est = torch.sum(torch.matmul(embedding_transpose, embedding) ** 2)
     loss_est_true = torch.sum(torch.matmul(embedding_transpose, assignments) ** 2)
     loss_true = torch.sum(torch.matmul(assignments_transpose, assignments) ** 2)
-    loss = (loss_est - 2 * loss_est_true + loss_true) / norm
+    loss = (loss_est - 2 * loss_est_true + loss_true) / norm.detach()
     return loss
 
 

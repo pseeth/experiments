@@ -11,7 +11,7 @@ import utils
 class ScaperLoader(Dataset):
     def __init__(self, folder, length = 1.0, n_fft=512, hop_length=128, sr=None, output_type='psa', group_sources=[], ignore_sources=[], source_labels=[]):
         self.folder = folder
-        self.jam_files = sorted([os.path.join(folder, x) for x in os.listdir(folder) if '.json' in x])
+        self.files = sorted([os.path.join(folder, x) for x in os.listdir(folder) if '.json' in x])
         self.n_fft = n_fft
         self.hop_length = hop_length
         self.length = length
@@ -26,7 +26,7 @@ class ScaperLoader(Dataset):
         self.num_extra_sources = 1
         
         #initialization
-        jam_file = self.jam_files[0]
+        jam_file = self.files[0]
         jam = jams.load(jam_file)
         
         if len(self.source_labels) == 0:
@@ -42,12 +42,12 @@ class ScaperLoader(Dataset):
         _, self.sr = librosa.load(jam_file[:-4] + 'wav', sr=self.sr)     
 
     def __len__(self):
-        return len(self.jam_files)
+        return len(self.files)
 
     def __getitem__(self, i):
-        jam_file = self.jam_files[i]
-        mix, sources, one_hots = self.load_jam_file(jam_file)
-        input_data, mix_magnitude, source_magnitudes, source_ibm = self.construct_input_output(mix, sources)
+        jam_file = self.files[i]
+        mix, sources, one_hots = self.load_audio_files(jam_file)
+        input_data, mix_magnitude, source_magnitudes, source_ibm, weights = self.construct_input_output(mix, sources)
         if self.whiten_data:
             input_data = self.whiten(input_data)
         return input_data, mix_magnitude, source_magnitudes, source_ibm, None, one_hots
@@ -98,9 +98,9 @@ class ScaperLoader(Dataset):
         #source_ratio = source_magnitudes / source_magnitudes.sum(axis=-1, keepdims=True)
         #source_magnitudes = np.expand_dims(mix_magnitude, axis=-1) * source_ratio
  
-        return mix_log_magnitude, mix_magnitude, source_magnitudes, source_ibm
+        return mix_log_magnitude, mix_magnitude, source_magnitudes, source_ibm, None
 
-    def load_jam_file(self, jam_file):
+    def load_audio_files(self, jam_file):
         mix, sr = utils.load_audio(jam_file[:-4] + 'wav')
         
         jam = jams.load(jam_file)
@@ -184,7 +184,7 @@ class ScaperLoader(Dataset):
         plt.imshow(input_data.T, aspect='auto', origin='lower')
         plt.show()
 
-        mix, sources, one_hots = self.load_jam_file(self.jam_files[i])
+        mix, sources, one_hots = self.load_audio_files(self.files[i])
         print('Mixture')
         utilities.audio(mix, self.sr, ext='.wav')
         for j, source in enumerate(sources):
