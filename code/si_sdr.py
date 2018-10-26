@@ -1,4 +1,5 @@
 import numpy as np
+from itertools import permutations
 
 
 def get_sdr_noperm_speech(estimated_signals, reference_signals, scaling=True):
@@ -52,10 +53,26 @@ def compute_measures(estimated_signal, reference_signals, j, scaling=True):
 
     return SDR, SIR,SAR
 
-# Time domain signals
-mix_sig = np.random.rand(5000)
-estimated_sig = np.random.rand(5000)
-reference_sig = np.random.rand(5000)
-residual_sig = mix_sig - reference_sig
 
-sdr, sir, sar = get_sdr_noperm_speech(estimated_sig, np.stack([reference_sig, residual_sig]).T)
+def sdr_permutation_search(mix_sig, src_sigs, est_sigs):
+    n_srcs = len(src_sigs)
+    perms = []
+    all_outputs = []
+    for perm in permutations(range(n_srcs)):
+        outputs = []
+        for k, src_sig in zip(perm, src_sigs):
+            res_sig = mix_sig - src_sig
+            metrics = get_sdr_noperm_speech(est_sigs[k], np.stack([src_sig, res_sig]).T)
+            outputs.append(metrics)
+        perms.append(np.asarray(outputs).mean(0))
+        all_outputs.append(outputs)
+    best_perm = np.asarray(perms)[:,0].argmax()
+    return np.asarray(all_outputs)[best_perm,:,:]
+
+
+# Time domain signals
+s_len = 5000
+mix_sig = np.random.rand(s_len)
+estimated_sigs = [np.random.rand(s_len), np.random.rand(s_len)] 
+reference_sigs = [np.random.rand(s_len), np.random.rand(s_len)]
+metrics = sdr_permutation_search(mix_sig, reference_sigs, estimated_sigs)
