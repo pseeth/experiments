@@ -3,7 +3,7 @@
 
 mkdir -p runs
 num_run=$(ls runs/ | wc -l |  tr -d ' ')
-run_id="run$num_run-dc-ground-truth"
+run_id="run$num_run-dc-bootstrap-confidence-threshold"
 dataset="2speakers_anechoic"
 covariance_type="tied_spherical"
 
@@ -19,6 +19,7 @@ if [ ! -d data/wsj0-mix/2speakers_anechoic/ ]; then
         model_path="/experiment/pipelines/wsj-deep-clustering/runs/$run_id"
         docker run --rm --workdir=/experiment -v `pwd`/../..:/experiment \
           --runtime=nvidia \
+          -e NVIDIA_VISIBLE_DEVICES=0 \
           --name wsj-deep-clustering \
           --entrypoint python \
           --ipc=host \
@@ -29,9 +30,9 @@ if [ ! -d data/wsj0-mix/2speakers_anechoic/ ]; then
             --validation_folder "/experiment/data/wsj0-mix/$dataset/wav8k/min/cv/" \
             --dataset_type wsj \
             --loss_function dc \
-            --embedding_activation sigmoid \
+            --embedding_activation tanh \
             --normalize_embeddings \
-            --target_type psa \
+            --target_type spatial_bootstrap \
             --disable-training-stats \
             --n_fft 256 \
             --hop_length 64 \
@@ -48,6 +49,7 @@ if [ ! -d data/wsj0-mix/2speakers_anechoic/ ]; then
             --projection_size 0 \
             --num_workers 10 \
             --resume \
+            --weight_method confidence_threshold \
             --sample_strategy sequential
     fi
 

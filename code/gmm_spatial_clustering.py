@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.mixture import GaussianMixture
 import librosa
+import utils
 
 def whiten(X, fudge=1E-18):
     Xcov = np.dot(X.T, X)
@@ -39,27 +40,36 @@ def extract_spatial_features(mix_stft, n_fft, sr):
     interlevel_difference = 10 * np.log10(interlevel_difference + 1e-8)
 
     frequencies = np.expand_dims((2 * np.pi * librosa.core.fft_frequencies(sr=sr, n_fft=n_fft)) / float(sr), axis=0)
+
     interphase_difference = np.angle(mix_stft[:, :, 1] * np.conj(mix_stft[:, :, 0])) / (frequencies + 1.0)
     return interlevel_difference, interphase_difference
 
-def gmm_spatial_clustering(mix, sr, num_sources, n_fft, hop_length, covariance_type='full'):
-    mix_stft, mix_log_magnitude = multichannel_stft(mix, n_fft, hop_length)
-    weights = np.max(mix_log_magnitude, axis=-1).flatten() > -50
-
+def gmm_spatial_clustering(mix_stft, mix_log_magnitude, sr, num_sources, n_fft, covariance_type='full'):
+    fit_weights = np.max(mix_log_magnitude, axis=-1).flatten() > -10
+    score_weights = np.max(mix_log_magnitude, axis=-1).flatten() > -40
     interlevel_difference, interphase_difference = extract_spatial_features(mix_stft, n_fft, sr)
     features = np.vstack([np.sin(interphase_difference).flatten(),
                           np.cos(interphase_difference).flatten()]).T
-    features_fit = features[weights]
 
     clusterer = GaussianMixture(n_components=num_sources,
                                 covariance_type=covariance_type,
-                                weights_init=[.5, .5])
-    clusterer.fit(features_fit)
+                                weights_init=[.5, .5],
+                                init_params='kmeans',
+                                warm_start=True)
+
+    clusterer.fit(features[fit_weights])
+    clusterer.fit(features[score_weights])
+
     assignments = clusterer.predict_proba(features)
+    cluster_sizes = np.sum(assignments[fit_weights], axis=0)
+    cluster_sizes /= np.sum(cluster_sizes)
+    cluster_size_weight = ((.5 - np.abs(cluster_sizes - .5)) * 2)[0] + 1e-3
+
     assignments = assignments.reshape(mix_stft.shape[:-1] + (-1,))
-    scores = np.exp(clusterer.score_samples(features)) * weights
-    scores = scores.reshape(mix_stft.shape[:-1])
+    likelihood_scores = np.exp(clusterer.score_samples(features))
+    likelihood_scores /= likelihood_scores.mean()
+    likelihood_scores = likelihood_scores.reshape(mix_stft.shape[:-1]) * cluster_size_weight
 
-    assignments = (assignments == assignments.max(axis=-1)) * weights.reshape(mix_stft.shape[:-1])
+    posterior_scores = 2*np.abs(np.max(assignments, axis=-1) - .5) * cluster_size_weight
 
-    return assignments, clusterer.bic(features), scores
+    return assignments, posterior_scores

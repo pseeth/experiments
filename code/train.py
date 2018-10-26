@@ -73,6 +73,7 @@ parser.add_argument("--covariance_min", default=.5)
 parser.add_argument("--fix_covariance", action='store_true')
 parser.add_argument("--num_gaussians_per_source", default=1)
 parser.add_argument("--use_likelihoods", action='store_true')
+parser.add_argument("--weight_method", default='magnitude')
 
 args = parser.parse_args()
 
@@ -128,7 +129,8 @@ params = {
     'fix_covariance': args.fix_covariance,
     'num_gaussians_per_source': int(args.num_gaussians_per_source),
     'use_likelihoods': args.use_likelihoods,
-    'curriculum_learning': args.curriculum_learning
+    'curriculum_learning': args.curriculum_learning,
+    'weight_method': args.weight_method
 }
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -173,14 +175,16 @@ elif params['dataset_type'] == 'wsj':
                             n_fft=params['n_fft'],
                             hop_length=params['hop_length'],
                             output_type=params['target_type'],
+                            weight_method=params['weight_method'],
                             num_channels=1))
 
     dataset = ConcatDataset(dataset) if len(dataset) > 1 else dataset[0]
+    target_type = params['target_type'] if params['target_type'] != 'spatial_bootstrap' else 'psa'
     val_dataset = WSJ0(folder=params['validation_folder'],
                        length='full',
                        n_fft=params['n_fft'],
                        hop_length=params['hop_length'],
-                       output_type=params['target_type'],
+                       output_type=target_type,
                        num_channels=1)
 
 if args.sample_strategy == 'sequential':
@@ -386,3 +390,7 @@ for epoch in epochs:
             'state_dict': module.state_dict(),
             'optimizer': optimizer.state_dict(),
         }, is_best, os.path.join(args.log_dir, 'checkpoints', 'latest.h5'))
+
+    if params['target_type'] == 'spatial_bootstrap':
+        if epoch > 0:
+            dataset.cache_data = False

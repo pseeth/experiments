@@ -76,3 +76,4 @@ mix_sig = np.random.rand(s_len)
 estimated_sigs = [np.random.rand(s_len), np.random.rand(s_len)] 
 reference_sigs = [np.random.rand(s_len), np.random.rand(s_len)]
 metrics = sdr_permutation_search(mix_sig, reference_sigs, estimated_sigs)
+print(metrics)

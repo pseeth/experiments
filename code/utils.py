@@ -13,12 +13,14 @@ from scipy.io import wavfile
 def magnitude_weights(magnitude):
     weights = magnitude / (np.sum(magnitude))
     weights *= (magnitude.shape[0] * magnitude.shape[1])
-    return np.sqrt(weights + 1e-7)
+    return weights
 
-def source_activity_weights(source_magnitudes, threshold=-40):
-    log_magnitude = 20 * np.log10(source_magnitudes + 1e-8)
-    above_threshold = (log_magnitude - np.max(log_magnitude)) > threshold
-    return np.max(above_threshold, axis=-1).astype(np.float32)
+def source_activity_weights(source_log_magnitudes, threshold=-40):
+    above_threshold = (source_log_magnitudes - np.max(source_log_magnitudes)) > threshold
+    return np.max(above_threshold, axis=-1, keepdims=True).astype(np.float32)
+
+def threshold_weights(log_magnitude, threshold=-40):
+    return ((log_magnitude - np.max(log_magnitude)) > threshold).astype(np.float32)
 
 def load_audio(file_path):
     rate, audio = wavfile.read(file_path)

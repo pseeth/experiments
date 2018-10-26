@@ -13,3 +13,4 @@ scikit-learn==0.19.1
 ipywidgets
 ffmpy
 boto3
+pomegranate
