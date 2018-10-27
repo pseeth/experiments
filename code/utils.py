@@ -77,7 +77,7 @@ def load_class_from_params(params, class_func):
     return class_func(**filtered_params)
 
 def load_model(run_directory, device_target='cuda'):
-    saved_model_path = os.path.join(run_directory, 'checkpoints/latest_best.h5')
+    saved_model_path = os.path.join(run_directory, 'checkpoints/latest.h5')
     with open(os.path.join(run_directory, 'params.json'), 'r') as f:
         params = json.load(f)
 

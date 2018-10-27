@@ -112,7 +112,7 @@ def gmm_spatial_clustering(mix_stft, mix_log_magnitude, sr, num_sources, n_fft, 
 
 
         cluster_sizes = np.sum(labels[fit_weights], axis=0)
-        cluster_sizes /= np.sum(cluster_sizes)
+        cluster_sizes /= (np.sum(cluster_sizes) + 1e-6)
         cluster_size_weight = ((source_share - np.abs(cluster_sizes - source_share)) * 2)[0] + 1e-3
         #weight = np.exp(clusterer.score(features[fit_weights])) * cluster_size_weight
         assignments = assignments.reshape(mix_stft.shape[:-1] + (-1,))
@@ -128,7 +128,7 @@ def gmm_spatial_clustering(mix_stft, mix_log_magnitude, sr, num_sources, n_fft, 
     #Overlap between 1 source model and 2 source model. Higher is better.
     js_divergence = gmm_js(clusterers[0], clusterers[1])
     #print(model_scores, aics, js_divergence, cluster_size_weight)
-    weight = js_divergence * cluster_size_weight
+    weight = max(0, (js_divergence) * cluster_size_weight)
 
     # likelihood_scores = likelihood_scores.reshape(mix_stft.shape[:-1] + (-1,)) * assignments
     # likelihood_scores /= np.mean(likelihood_scores.reshape((-1, assignments.shape[-1])), axis=0)

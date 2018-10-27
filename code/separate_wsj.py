@@ -16,7 +16,9 @@ def separate(mixture, model, params, device):
     if (len(mix.shape) > 1):
         mix = mixture[:, 0]
     _, mix = utils.mask_mixture(1, mix, params['n_fft'], params['hop_length'])
-    log_spec = utils.whiten(utils.transform(mix, params['n_fft'], params['hop_length']))
+    log_spec = utils.transform(mix, params['n_fft'], params['hop_length'])
+    silence_mask = log_spec > -60
+    log_spec = utils.whiten(log_spec)
 
     with torch.no_grad():
         input_data = torch.from_numpy(log_spec).unsqueeze(0).requires_grad_().to(device)
@@ -26,8 +28,9 @@ def separate(mixture, model, params, device):
 
             clusterer = KMeans(n_clusters=params['num_attractors'])
             embedding_ = embedding.squeeze(0).cpu().data.numpy()
-            clusterer.fit(embedding_)
-            assignments = clusterer.labels_.reshape((masks.shape[1], masks.shape[2]))
+            clusterer.fit(embedding_[silence_mask.flatten()])
+            assignments = clusterer.predict(embedding_)
+            assignments = assignments.reshape((masks.shape[1], masks.shape[2]))
 
     for i, label in enumerate(labels):
         mask = (assignments == i).T.astype(float)
