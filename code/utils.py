@@ -9,6 +9,9 @@ import shutil
 import inspect
 import librosa
 from scipy.io import wavfile
+from networks import *
+import json
+import os
 
 def magnitude_weights(magnitude):
     weights = magnitude / (np.sum(magnitude))
@@ -17,7 +20,15 @@ def magnitude_weights(magnitude):
 
 def source_activity_weights(source_log_magnitudes, threshold=-40):
     above_threshold = (source_log_magnitudes - np.max(source_log_magnitudes)) > threshold
-    return np.max(above_threshold, axis=-1, keepdims=True).astype(np.float32)
+    return np.max(above_threshold, axis=-1).astype(np.float32)
+
+def source_magnitude_weights(source_magnitudes):
+    shape = source_magnitudes.shape
+    num_sources = shape[-1]
+    weights = source_magnitudes / (np.sum(source_magnitudes.reshape((-1, num_sources)), axis=0))
+    weights *= shape[0]*shape[1]
+    weights = np.max(weights, axis=-1)
+    return weights
 
 def threshold_weights(log_magnitude, threshold=-40):
     return ((log_magnitude - np.max(log_magnitude)) > threshold).astype(np.float32)
@@ -56,14 +67,6 @@ def pad_packed_collate(batch, target_length=400, num_channels=1):
 
     return spectrogram, magnitude_spectrogram, source_spectrograms, source_ibms, weights, one_hots
 
-def mask_mixture(mask, mix, n_fft, hop_length):
-    n = len(mix)
-    mix = librosa.util.fix_length(mix, n + n_fft // 2)
-    mix_stft = librosa.stft(mix, n_fft=n_fft, hop_length=hop_length)
-    masked_mix = mix_stft * mask
-    source = librosa.istft(masked_mix, hop_length=hop_length, length=n)
-    return source
-
 def load_class_from_params(params, class_func):
     arguments = inspect.getfullargspec(class_func).args[1:]
     if 'input_size' not in params and 'input_size' in arguments:
@@ -72,6 +75,51 @@ def load_class_from_params(params, class_func):
         params['num_sources'] = params['num_attractors']
     filtered_params = {p: params[p] for p in params if p in arguments}
     return class_func(**filtered_params)
+
+def load_model(run_directory, device_target='cuda'):
+    saved_model_path = os.path.join(run_directory, 'checkpoints/latest_best.h5')
+    with open(os.path.join(run_directory, 'params.json'), 'r') as f:
+        params = json.load(f)
+
+    device = torch.device('cuda', 1) if device_target == 'cuda' else torch.device('cpu')
+    class_func = MaskEstimation if 'baseline' in run_directory else DeepAttractor
+    model = load_class_from_params(params, class_func).to(device)
+
+    model.eval()
+    checkpoint = torch.load(saved_model_path)
+    model.load_state_dict(checkpoint['state_dict'])
+    show_model(model)
+    return model, params, device
+
+def stereo_transform(data, n_fft, hop_length):
+    n = data.shape[-1]
+    data = librosa.util.fix_length(data, n + n_fft // 2, axis=-1)
+    stft = np.stack([librosa.stft(data[ch], n_fft=n_fft, hop_length=hop_length)
+                     for ch in range(data.shape[0])], axis=-1)
+    log_spec = librosa.amplitude_to_db(np.abs(stft), ref=np.max)
+    return log_spec, stft, n
+
+def transform(data, n_fft, hop_length):
+    n = len(data)
+    data = librosa.util.fix_length(data, n + n_fft // 2)
+    stft = librosa.stft(data, n_fft=n_fft, hop_length=hop_length).T
+    log_spec = librosa.amplitude_to_db(np.abs(stft), ref=np.max)
+    return log_spec
+
+def whiten(data):
+    data -= data.mean()
+    data /= data.std() + 1e-7
+    return data
+
+def mask_mixture(source_mask, mix, n_fft, hop_length):
+    n = len(mix)
+    mix = librosa.util.fix_length(mix, n + n_fft // 2)
+    mix_stft = librosa.stft(mix, n_fft=n_fft, hop_length=hop_length)
+    mix = librosa.istft(mix_stft, hop_length=hop_length, length=n)
+    masked_mix = mix_stft * source_mask
+    source = librosa.istft(masked_mix, hop_length=hop_length, length=n)
+    return source, mix
+
 
 def project_embeddings(embedding, num_dimensions=3, t=0.0, fig=None, ax=None, bins=None, gridsize=50):
     """

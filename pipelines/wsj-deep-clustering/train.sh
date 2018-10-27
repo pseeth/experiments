@@ -3,7 +3,7 @@
 
 mkdir -p runs
 num_run=$(ls runs/ | wc -l |  tr -d ' ')
-run_id="run$num_run-dc-bootstrap-confidence-threshold"
+run_id="run$num_run-dc-bootstrap-confidence-mag-weight"
 dataset="2speakers_anechoic"
 covariance_type="tied_spherical"
 
@@ -19,7 +19,7 @@ if [ ! -d data/wsj0-mix/2speakers_anechoic/ ]; then
         model_path="/experiment/pipelines/wsj-deep-clustering/runs/$run_id"
         docker run --rm --workdir=/experiment -v `pwd`/../..:/experiment \
           --runtime=nvidia \
-          -e NVIDIA_VISIBLE_DEVICES=0 \
+          -e NVIDIA_VISIBLE_DEVICES=all \
           --name wsj-deep-clustering \
           --entrypoint python \
           --ipc=host \
@@ -39,7 +39,7 @@ if [ ! -d data/wsj0-mix/2speakers_anechoic/ ]; then
             --hidden_size 300 \
             --num_layers 4 \
             --num_epochs 100 \
-            --batch_size 20 \
+            --batch_size 40 \
             --clustering_type gmm \
             --covariance_type $covariance_type \
             --num_clustering_iterations 0 \
@@ -47,9 +47,9 @@ if [ ! -d data/wsj0-mix/2speakers_anechoic/ ]; then
             --learning_rate 1e-3 \
             --initial_length 400 \
             --projection_size 0 \
-            --num_workers 10 \
+            --num_workers 12 \
             --resume \
-            --weight_method confidence_threshold \
+            --weight_method confidence_magnitude \
             --sample_strategy sequential
     fi
 

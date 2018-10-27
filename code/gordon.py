@@ -8,7 +8,8 @@ num_points=30
 embedding_size=8
 embeddings = torch.rand(batch_size, num_points, embedding_size)
 weights = torch.rand(batch_size, num_points)
-weights *= np.random.randint(0, 1000)
+weights *= .5
+
 a0 = torch.randint(0,2, (batch_size, num_points))
 assignments = torch.stack([a0, 1-a0], dim=-1)
 

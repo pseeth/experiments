@@ -7,43 +7,6 @@ import argparse
 from scipy.io import wavfile
 import numpy as np
 
-def load_model(run_directory, device_target='cuda'):
-    saved_model_path = os.path.join(run_directory, 'checkpoints/latest_best.h5')
-    with open(os.path.join(run_directory, 'params.json'), 'r') as f:
-        params = json.load(f)
-
-    device = torch.device('cuda', 1) if device_target == 'cuda' else torch.device('cpu')
-    class_func = MaskEstimation if 'baseline' in run_directory else DeepAttractor
-    model = load_class_from_params(params, class_func).to(device)
-
-    model.eval()
-    checkpoint = torch.load(saved_model_path)
-    model.load_state_dict(checkpoint['state_dict'])
-    show_model(model)
-    return model, params, device
-
-def transform(data, n_fft, hop_length):
-    n = len(data)
-    data = librosa.util.fix_length(data, n + n_fft // 2)
-    stft = librosa.stft(data, n_fft=n_fft, hop_length=hop_length).T
-    log_spec = librosa.amplitude_to_db(np.abs(stft), ref=np.max)
-    return log_spec
-
-def whiten(data):
-    data -= data.mean()
-    data /= data.std() + 1e-7
-    return data
-
-def mask_mixture(source_mask, mix, n_fft, hop_length):
-    n = len(mix)
-    mix = librosa.util.fix_length(mix, n + n_fft // 2)
-    mix_stft = librosa.stft(mix, n_fft=n_fft, hop_length=hop_length)
-    mix = librosa.istft(mix_stft, hop_length=hop_length, length=n)
-    masked_mix = mix_stft * source_mask
-    source = librosa.istft(masked_mix, hop_length=hop_length, length=n)
-    return source, mix
-
-
 def separate(mixture, model, params, device):
     labels = ['vocals', 'drums', 'bass', 'other']
     estimates = {l: np.zeros(mixture.shape) for l in labels}

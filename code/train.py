@@ -74,6 +74,8 @@ parser.add_argument("--fix_covariance", action='store_true')
 parser.add_argument("--num_gaussians_per_source", default=1)
 parser.add_argument("--use_likelihoods", action='store_true')
 parser.add_argument("--weight_method", default='magnitude')
+parser.add_argument("--create_cache", action='store_true')
+parser.add_argument("--generate_plots", action='store_true')
 
 args = parser.parse_args()
 
@@ -130,7 +132,8 @@ params = {
     'num_gaussians_per_source': int(args.num_gaussians_per_source),
     'use_likelihoods': args.use_likelihoods,
     'curriculum_learning': args.curriculum_learning,
-    'weight_method': args.weight_method
+    'weight_method': args.weight_method,
+    'create_cache': args.create_cache
 }
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -176,6 +179,7 @@ elif params['dataset_type'] == 'wsj':
                             hop_length=params['hop_length'],
                             output_type=params['target_type'],
                             weight_method=params['weight_method'],
+                            create_cache=params['create_cache'],
                             num_channels=1))
 
     dataset = ConcatDataset(dataset) if len(dataset) > 1 else dataset[0]
@@ -185,6 +189,7 @@ elif params['dataset_type'] == 'wsj':
                        n_fft=params['n_fft'],
                        hop_length=params['hop_length'],
                        output_type=target_type,
+                       create_cache=params['create_cache'],
                        num_channels=1)
 
 if args.sample_strategy == 'sequential':
@@ -378,7 +383,7 @@ for epoch in epochs:
 
     is_best = True
     if params['validate']:
-        val_loss = validate(module, val_dataset, writer, n_iter, params, device, loss_function)
+        val_loss = validate(module, val_dataset, writer, n_iter, params, device, loss_function, generate_plots=args.generate_plots)
         writer.add_scalar('val_loss/scalar', val_loss, epoch)
         val_losses.append(val_loss)
         is_best = (val_loss == min(val_losses))
@@ -391,6 +396,6 @@ for epoch in epochs:
             'optimizer': optimizer.state_dict(),
         }, is_best, os.path.join(args.log_dir, 'checkpoints', 'latest.h5'))
 
-    if params['target_type'] == 'spatial_bootstrap':
-        if epoch > 0:
-            dataset.cache_data = False
+    if epoch >= 0:
+        dataset.create_cache = False
+        val_dataset.create_cache = False

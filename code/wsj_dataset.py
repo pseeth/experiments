@@ -8,16 +8,16 @@ from gmm_spatial_clustering import gmm_spatial_clustering
 import pickle
 
 class WSJ0(Dataset):
-    def __init__(self, folder, length=400, n_fft=512, hop_length=128, sr=None, num_channels=2, take_left_channel=True, weight_method='magnitude', output_type='psa'):
+    def __init__(self, folder, length=400, n_fft=512, hop_length=128, sr=None, num_channels=2, take_left_channel=True, weight_method='magnitude', output_type='psa', create_cache=True):
         self.folder = folder
         self.files = sorted([x for x in os.listdir(os.path.join(folder, 'mix')) if '.wav' in x])
         self.speaker_folders = sorted([x for x in os.listdir(folder) if 's' in x])
         self.num_speakers = len(self.speaker_folders)
         self.target_length = int(length) if length != 'full' else 'full'
         self.weight_method = weight_method
-        self.cache_location = os.path.join(folder, 'cache1')
+        self.cache_location = os.path.join(folder, 'cache', output_type, weight_method)
         os.makedirs(self.cache_location, exist_ok=True)
-        self.cache_data = True
+        self.create_cache = create_cache
 
         self.n_fft = n_fft
         self.hop_length = hop_length
@@ -38,14 +38,31 @@ class WSJ0(Dataset):
 
     def __getitem__(self, i):
         wav_file = self.files[i]
-        mix, sources, one_hots = self.load_audio_files(wav_file)
-        input_data, mix_magnitude, source_magnitudes, source_ibm, weights = self.construct_input_output(mix, sources, wav_file)
-        if self.whiten_data:
-            input_data = self.whiten(input_data)
-        data_list = self.get_target_length_and_transpose([input_data, mix_magnitude, source_magnitudes, source_ibm, weights],
-                                                     self.target_length)
-        input_data, mix_magnitude, source_magnitudes, source_ibm, weights = tuple(data_list)
-        return input_data, mix_magnitude, source_magnitudes, source_ibm, weights, one_hots
+        if self.create_cache:
+            mix, sources, one_hots = self.load_audio_files(wav_file)
+            input_data, mix_magnitude, source_magnitudes, source_ibm, weights = self.construct_input_output(mix, sources, wav_file)
+            if self.whiten_data:
+                input_data = self.whiten(input_data)
+            data_list = self.get_target_length_and_transpose([input_data, mix_magnitude, source_magnitudes, source_ibm, weights],
+                                                         self.target_length)
+            input_data, mix_magnitude, source_magnitudes, source_ibm, weights = tuple(data_list)
+
+            data_dict = {'input_data': input_data,
+                         'mix_magnitude': mix_magnitude,
+                         'source_magnitudes': source_magnitudes,
+                         'source_ibm': source_ibm,
+                         'weights': weights,
+                         'one_hots': one_hots}
+            self.write_to_cache(data_dict, wav_file)
+        else:
+            data_dict = self.load_from_cache(wav_file)
+
+        return (data_dict['input_data'],
+                data_dict['mix_magnitude'],
+                data_dict['source_magnitudes'],
+                data_dict['source_ibm'],
+                data_dict['weights'],
+                data_dict['one_hots'])
 
     def get_target_length_and_transpose(self, data_list, target_length):
         length = data_list[0].shape[1]
@@ -79,16 +96,14 @@ class WSJ0(Dataset):
             data /= self.stats['std'] + 1e-7
         return data
 
-    def write_to_cache(self, assignments, scores, wav_file):
-        data_dict = {'assignments': assignments,
-                     'scores': scores}
+    def write_to_cache(self, data_dict, wav_file):
         with open(os.path.join(self.cache_location, wav_file), 'wb') as f:
             pickle.dump(data_dict, f)
 
     def load_from_cache(self, wav_file):
         with open(os.path.join(self.cache_location, wav_file), 'rb') as f:
             data = pickle.load(f)
-        return data['assignments'], data['scores']
+        return data
 
     def construct_input_output(self, mix, sources, wav_file):
         mix_log_magnitude, mix_stft, _ = self.transform(mix, self.n_fft, self.hop_length)
@@ -100,16 +115,12 @@ class WSJ0(Dataset):
 
         if self.output_type == 'spatial_bootstrap':
             sources = []
-            if self.cache_data:
-                assignments, scores = gmm_spatial_clustering(mix_stft.swapaxes(0, 1),
-                                                          mix_log_magnitude.swapaxes(0, 1),
-                                                          self.sr,
-                                                          self.num_speakers,
-                                                          self.n_fft,
-                                                          covariance_type='full')
-                self.write_to_cache(assignments, scores, wav_file)
-            else:
-                assignments, scores = self.load_from_cache(wav_file)
+            assignments, scores = gmm_spatial_clustering(mix_stft.swapaxes(0, 1),
+                                                      mix_log_magnitude.swapaxes(0, 1),
+                                                      self.sr,
+                                                      self.num_speakers,
+                                                      self.n_fft,
+                                                      covariance_type='full')
 
             for i in range(self.num_speakers):
                 mask = assignments[:, :, i].T
@@ -152,7 +163,9 @@ class WSJ0(Dataset):
         if 'magnitude' in self.weight_method:
             weights *= utils.magnitude_weights(mix_magnitude)
         if 'threshold' in self.weight_method:
-            weights *= utils.threshold_weights(mix_log_magnitude)
+            weights *= utils.source_activity_weights(source_log_magnitudes.reshape(shape))
+        if 'source_mag' in self.weight_method:
+            weights *= utils.source_magnitude_weights(source_magnitudes.reshape(shape))
 
         weights = np.sqrt(weights + 1e-6)
         return mix_log_magnitude, mix_magnitude, source_magnitudes, source_ibm, weights
@@ -212,6 +225,8 @@ class WSJ0(Dataset):
         plt.colorbar()
         plt.show()
 
+        print(weights.min(), weights.max(), weights.mean(), np.median(weights))
+
         mix, sources, _ = self.load_audio_files(self.files[i])
         print('Mixture')
         utilities.audio(mix[0].T, self.sr, ext='.wav')
@@ -225,6 +240,7 @@ class WSJ0(Dataset):
 
         for j in range(len(sources)):
             mask = source_ibm[:, :, :, j] * weight_mask #(output_data[:, :, :, j] / (mix_magnitude + 1e-7))
+
             #mask /= mask.max()
             #mask = np.sqrt(mask)
             plt.figure(figsize=(20, 5))
