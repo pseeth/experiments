@@ -23,7 +23,7 @@ def affinity_cost(embedding, assignments, weights=None):
     embedding = embedding.view(-1, embedding_size)
     assignments = assignments.view(-1, num_sources)
 
-    if weights is None:
+    if weights.sum() < 0:
         silence_mask = torch.sum(assignments.detach(), dim=-1, keepdim=True)
         embedding = silence_mask * embedding
 

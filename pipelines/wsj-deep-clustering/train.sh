@@ -3,8 +3,8 @@
 
 mkdir -p runs
 num_run=$(ls runs/ | wc -l |  tr -d ' ')
-run_id="run$num_run-dc-bootstrap-confidence-mag-weight-reverb"
-dataset="2speakers_reverb"
+run_id="run$num_run-dc-bootstrap-log-confidence-mag-alpha1-weight"
+dataset="2speakers_anechoic"
 covariance_type="tied_spherical"
 
 echo $model_path > model_path
@@ -19,8 +19,8 @@ if [ ! -d data/wsj0-mix/2speakers_anechoic/ ]; then
         model_path="/experiment/pipelines/wsj-deep-clustering/runs/$run_id"
         docker run --rm --workdir=/experiment -v `pwd`/../..:/experiment \
           --runtime=nvidia \
-          -e NVIDIA_VISIBLE_DEVICES=1 \
-          --name wsj-deep-clustering-reverb \
+          -e NVIDIA_VISIBLE_DEVICES=0 \
+          --name $run_id \
           --entrypoint python \
           --ipc=host \
           thesis \
@@ -49,9 +49,9 @@ if [ ! -d data/wsj0-mix/2speakers_anechoic/ ]; then
             --projection_size 0 \
             --num_workers 12 \
             --resume \
-            --weight_method confidence_magnitude \
-            --sample_strategy sequential \
-            --create_cache
+            --weight_method log_confidence_magnitude \
+            --create_cache \
+            --sample_strategy sequential
     fi
 
     if [ $USE_DOCKER -eq 0 ]; then

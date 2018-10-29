@@ -5,6 +5,7 @@ rm -rf data/generated
 if [ $USE_DOCKER -eq 1 ]; then
     docker stop -t 0 data_generation || true
     docker run --rm --workdir=/pipeline -v `pwd`:/pipeline \
+      -v `pwd`/../../data:/pipeline/data \
       --entrypoint python \
       --name data_generation \
       --user $UID \

@@ -3,7 +3,7 @@
 
 #Specify GPU cloud provider using env variable?
 USE_DOCKER=`cat ../DOCKER`
-model_path="pipelines/em-cluster-music/runs/run-tied_spherical-l1-dc/"
+model_path="pipelines/em-cluster-music/runs/run-tied_diag-l1-dc/"
 
 if [ ! -d data/musdb ]; then
     if [ $USE_DOCKER -eq 1 ]; then

@@ -2,7 +2,7 @@
 # [wf] execute train stage
 
 mkdir -p runs
-covariance_type="tied_spherical"
+covariance_type="tied_diag"
 num_run=$(ls runs/ | wc -l |  tr -d ' ')
 run_id="run-$covariance_type-l1-dc"
 
@@ -21,7 +21,8 @@ if [ ! -d data/musdb ]; then
         model_path="/experiment/pipelines/em-cluster-music/runs/$run_id"
         docker run --rm --workdir=/experiment -v `pwd`/../..:/experiment \
           --runtime=nvidia \
-          --name em-cluster-music \
+          -e NVIDIA_VISIBLE_DEVICES=0 \
+          --name em-cluster-music-$covariance_type \
           --entrypoint python \
           --ipc=host \
           thesis \

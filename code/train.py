@@ -189,7 +189,7 @@ elif params['dataset_type'] == 'wsj':
                        n_fft=params['n_fft'],
                        hop_length=params['hop_length'],
                        output_type=target_type,
-                       create_cache=params['create_cache'],
+                       create_cache=True, #params['create_cache'],
                        num_channels=1)
 
 if args.sample_strategy == 'sequential':
@@ -308,7 +308,9 @@ for epoch in epochs:
     if args.curriculum_learning:
         if epoch >= int(params['num_epochs'] / 5):
             # Lengthen sequences for learning
+            dataset.create_cache = True
             dataset.length = 1.0
+            val_dataset.create_cache = True
             val_dataset.length = 1.0
                 
     progress_bar = trange(num_iterations)

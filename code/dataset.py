@@ -7,9 +7,10 @@ import scaper
 import random
 import sox
 import utils
+import pickle
 
 class ScaperLoader(Dataset):
-    def __init__(self, folder, length = 1.0, n_fft=512, hop_length=128, sr=None, output_type='psa', group_sources=[], ignore_sources=[], source_labels=[]):
+    def __init__(self, folder, length = 1.0, n_fft=512, hop_length=128, sr=None, output_type='psa', group_sources=[], ignore_sources=[], source_labels=[], create_cache=True):
         self.folder = folder
         self.files = sorted([os.path.join(folder, x) for x in os.listdir(folder) if '.json' in x])
         self.n_fft = n_fft
@@ -24,6 +25,10 @@ class ScaperLoader(Dataset):
         self.source_labels = source_labels
         self.reorder_sources = False
         self.num_extra_sources = 1
+        self.cache_location = os.path.join(folder, 'cache', output_type)
+        os.makedirs(self.cache_location, exist_ok=True)
+        self.create_cache = create_cache
+        self.do_not_cache = True
         
         #initialization
         jam_file = self.files[0]
@@ -46,11 +51,37 @@ class ScaperLoader(Dataset):
 
     def __getitem__(self, i):
         jam_file = self.files[i]
-        mix, sources, one_hots = self.load_audio_files(jam_file)
-        input_data, mix_magnitude, source_magnitudes, source_ibm, weights = self.construct_input_output(mix, sources)
-        if self.whiten_data:
-            input_data = self.whiten(input_data)
-        return input_data, mix_magnitude, source_magnitudes, source_ibm, None, one_hots
+        if self.create_cache or self.do_not_cache:
+            mix, sources, one_hots = self.load_audio_files(jam_file)
+            input_data, mix_magnitude, source_magnitudes, source_ibm, weights = self.construct_input_output(mix, sources)
+            if self.whiten_data:
+                input_data = self.whiten(input_data)
+            data_dict = {'input_data': input_data,
+                         'mix_magnitude': mix_magnitude,
+                         'source_magnitudes': source_magnitudes,
+                         'source_ibm': source_ibm,
+                         'weights': weights,
+                         'one_hots': one_hots}
+            if not self.do_not_cache:
+                self.write_to_cache(data_dict, jam_file.split('/')[-1])
+        else:
+            data_dict = self.load_from_cache(jam_file.split('/')[-1])
+
+        return (data_dict['input_data'],
+                data_dict['mix_magnitude'],
+                data_dict['source_magnitudes'],
+                data_dict['source_ibm'],
+                data_dict['weights'],
+                data_dict['one_hots'])
+
+    def write_to_cache(self, data_dict, wav_file):
+        with open(os.path.join(self.cache_location, wav_file), 'wb') as f:
+            pickle.dump(data_dict, f)
+
+    def load_from_cache(self, wav_file):
+        with open(os.path.join(self.cache_location, wav_file), 'rb') as f:
+            data = pickle.load(f)
+        return data
 
     def whiten(self, data):
         if self.stats is None:
@@ -98,10 +129,11 @@ class ScaperLoader(Dataset):
         #source_ratio = source_magnitudes / source_magnitudes.sum(axis=-1, keepdims=True)
         #source_magnitudes = np.expand_dims(mix_magnitude, axis=-1) * source_ratio
  
-        return mix_log_magnitude, mix_magnitude, source_magnitudes, source_ibm, None
+        return mix_log_magnitude, mix_magnitude, source_magnitudes, source_ibm, -1
 
     def load_audio_files(self, jam_file):
         mix, sr = utils.load_audio(jam_file[:-4] + 'wav')
+        mix = mix[0]
         
         jam = jams.load(jam_file)
         data = jam.annotations[0]['data']['value']            
@@ -117,7 +149,7 @@ class ScaperLoader(Dataset):
             if d['role'] == 'foreground':
                 source_path = d['saved_source_file']
                 source_path = os.path.join(self.folder, source_path.split('/')[-1])
-                sources.append(utils.load_audio(source_path)[0])
+                sources.append(utils.load_audio(source_path)[0][0])
                 one_hot = np.zeros(len(classes))
                 one_hot[self.source_indices[d['label']]] = 1
                 used_classes.append(d['label'])

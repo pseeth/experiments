@@ -129,6 +129,10 @@ class WSJ0(Dataset):
 
             if 'confidence' in self.weight_method:
                 weights *= np.expand_dims(scores.T, axis=-1)
+                if 'log' in self.weight_method:
+                    weights = (1.0 / (np.abs(np.log(weights + 1e-6))))
+                if 'alpha' in self.weight_method:
+                    weights = weights ** 2
 
             #take left channel
             mix_magnitude = np.expand_dims(mix_magnitude[:, :, 0], axis=-1)
@@ -141,28 +145,34 @@ class WSJ0(Dataset):
             if self.output_type == 'msa':
                 source_magnitude = np.minimum(mix_magnitude, source_magnitude)
             elif self.output_type == 'psa':
-                source_magnitude = np.maximum(0.0, np.minimum(mix_magnitude, source_magnitude * np.cos(source_phase - mix_phase)))                
+                source_magnitude = np.maximum(0.0, np.minimum(mix_magnitude, source_magnitude * np.cos(source_phase - mix_phase)))
             source_magnitudes.append(source_magnitude)
             source_log_magnitudes.append(source_log_magnitude)
-            
+
         source_magnitudes = np.stack(source_magnitudes, axis=-1)
         source_log_magnitudes = np.stack(source_log_magnitudes, axis=-1)
-        
+
         shape = source_magnitudes.shape
         source_log_magnitudes = source_log_magnitudes.reshape(np.prod(shape[0:-1]), shape[-1])
 
         source_ibm = np.zeros(source_log_magnitudes.shape)
         source_argmax = np.argmax(source_log_magnitudes, axis=-1)
         source_ibm[np.arange(source_ibm.shape[0]), source_argmax] = 1.0
-        
+
         source_ibm = source_ibm.reshape(shape)
 
         if self.output_type == 'ibm':
             source_magnitudes = np.expand_dims(mix_magnitude, axis=-1) * source_ibm
 
         if 'magnitude' in self.weight_method:
+            magnitude_weights = utils.magnitude_weights(mix_magnitude)
+            if 'norm':
+                magnitude_weights /= (magnitude_weights.max() + 1e-6)
             weights *= utils.magnitude_weights(mix_magnitude)
-        if 'threshold' in self.weight_method:
+        if 'silence_threshold' in self.weight_method:
+            silence_mask = utils.threshold_weights(mix_log_magnitude, threshold=-40)
+            weights *= silence_mask
+        if 'source_threshold' in self.weight_method:
             weights *= utils.source_activity_weights(source_log_magnitudes.reshape(shape))
         if 'source_mag' in self.weight_method:
             weights *= utils.source_magnitude_weights(source_magnitudes.reshape(shape))
