@@ -157,7 +157,7 @@ def project_embeddings(embedding, num_dimensions=3, t=0.0, fig=None, ax=None, bi
         result=pd.DataFrame(output_transform, columns=['PCA%i' % i for i in range(3)])
         if ax is None:
             ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(result['PCA0'], result['PCA1'], result['PCA2'], cmap="Set2_r", s=60)
+        ax.scatter(result['PCA0'], result['PCA1'], result['PCA2'], cmap="Set2_r", s=10)
 
         # make simple, bare axis lines through space:
         xAxisLine = ((min(result['PCA0']), max(result['PCA0'])), (0, 0), (0,0))

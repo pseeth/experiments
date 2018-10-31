@@ -132,7 +132,7 @@ class WSJ0(Dataset):
                 if 'log' in self.weight_method:
                     weights = (1.0 / (np.abs(np.log(weights + 1e-6))))
                 if 'alpha' in self.weight_method:
-                    weights = weights ** 2
+                    weights = weights ** .1
 
             #take left channel
             mix_magnitude = np.expand_dims(mix_magnitude[:, :, 0], axis=-1)

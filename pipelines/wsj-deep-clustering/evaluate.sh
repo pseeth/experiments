@@ -3,8 +3,8 @@
 
 #Specify GPU cloud provider using env variable?
 USE_DOCKER=`cat ../DOCKER`
-model_path="pipelines/wsj-deep-clustering/runs/run58-dc-bootstrap-log-confidence-mag-q-weight"
-tag="dry"
+model_path="pipelines/wsj-deep-clustering/runs/run68-dc-bootstrap-confidence-mag-alpha.1-weight"
+tag="cv"
 
 if [ ! -d data/wsj0-mix ]; then
     if [ $USE_DOCKER -eq 1 ]; then
