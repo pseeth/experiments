@@ -3,7 +3,7 @@
 
 mkdir -p runs
 num_run=$(ls runs/ | wc -l |  tr -d ' ')
-run_id="run$num_run-dc-bootstrap-confidence-mag-alpha.1-weight"
+run_id="run$num_run-dc-gt-1000"
 dataset="2speakers_anechoic"
 covariance_type="tied_spherical"
 
@@ -32,7 +32,7 @@ if [ ! -d data/wsj0-mix/2speakers_anechoic/ ]; then
             --loss_function dc \
             --embedding_activation tanh \
             --normalize_embeddings \
-            --target_type spatial_bootstrap \
+            --target_type psa \
             --disable-training-stats \
             --n_fft 256 \
             --hop_length 64 \
@@ -49,7 +49,7 @@ if [ ! -d data/wsj0-mix/2speakers_anechoic/ ]; then
             --projection_size 0 \
             --num_workers 12 \
             --resume \
-            --weight_method alpha2_confidence_magnitude \
+            --weight_method magnitude \
             --create_cache \
             --sample_strategy sequential
     fi

@@ -6,16 +6,34 @@ import utils
 from scipy.io import wavfile
 from gmm_spatial_clustering import gmm_spatial_clustering
 import pickle
+from random import shuffle
 
 class WSJ0(Dataset):
-    def __init__(self, folder, length=400, n_fft=512, hop_length=128, sr=None, num_channels=2, take_left_channel=True, weight_method='magnitude', output_type='psa', create_cache=True):
+    def __init__(self, folder,
+                 length=400,
+                 n_fft=512,
+                 hop_length=128,
+                 sr=None,
+                 num_channels=2,
+                 take_left_channel=True,
+                 weight_method='magnitude',
+                 output_type='psa',
+                 create_cache=True,
+                 cache_location=None,
+                 limit=1000):
         self.folder = folder
         self.files = sorted([x for x in os.listdir(os.path.join(folder, 'mix')) if '.wav' in x])
+        if limit is not None:
+            shuffle(self.files)
+            self.files = self.files[:limit]
         self.speaker_folders = sorted([x for x in os.listdir(folder) if 's' in x])
         self.num_speakers = len(self.speaker_folders)
         self.target_length = int(length) if length != 'full' else 'full'
         self.weight_method = weight_method
-        self.cache_location = os.path.join(folder, 'cache', output_type, weight_method)
+        if cache_location is None:
+            self.cache_location = os.path.join(folder, 'cache', output_type, weight_method)
+        else:
+            self.cache_location = os.path.join(folder, 'cache', cache_location)
         os.makedirs(self.cache_location, exist_ok=True)
         self.create_cache = create_cache
 
@@ -132,7 +150,7 @@ class WSJ0(Dataset):
                 if 'log' in self.weight_method:
                     weights = (1.0 / (np.abs(np.log(weights + 1e-6))))
                 if 'alpha' in self.weight_method:
-                    weights = weights ** .1
+                    weights = weights ** .5
 
             #take left channel
             mix_magnitude = np.expand_dims(mix_magnitude[:, :, 0], axis=-1)
@@ -168,7 +186,7 @@ class WSJ0(Dataset):
             magnitude_weights = utils.magnitude_weights(mix_magnitude)
             if 'norm':
                 magnitude_weights /= (magnitude_weights.max() + 1e-6)
-            weights *= utils.magnitude_weights(mix_magnitude)
+            weights *= magnitude_weights
         if 'silence_threshold' in self.weight_method:
             silence_mask = utils.threshold_weights(mix_log_magnitude, threshold=-40)
             weights *= silence_mask

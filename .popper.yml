@@ -60,6 +60,17 @@ pipelines:
     - prepare-musdb
     - generate-dataset
     timeout: 0
+  prepare-nsynth-data:
+    envs:
+      host:
+        args: []
+    parameters: []
+    path: pipelines/prepare-nsynth-data
+    requirements: {}
+    stages:
+    - prepare-nsynth
+    - generate-data
+    timeout: 0
   rnn-music-baseline:
     envs:
       host:
