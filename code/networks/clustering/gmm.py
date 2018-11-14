@@ -3,37 +3,54 @@ import torch.nn as nn
 import numpy as np
     
 class GMM(nn.Module):
-    def __init__(self, n_clusters, n_iterations=5, covariance_type='diag', covariance_min=0.0, fix_covariance=False):
+    def __init__(self, n_clusters, n_iterations=5, covariance_type='diag', covariance_init=1.0):
+        """
+
+        Args:
+            n_clusters:
+            n_iterations:
+            covariance_type:
+            covariance_init:
+        """
         super(GMM, self).__init__()
         self.n_clusters = n_clusters
         self.n_iterations = n_iterations
-        self.covariance_min = covariance_min
-        self.fix_covariance = fix_covariance
-        
-        allowed_covariance_types = ['diag', 'spherical', 'tied_diag', 'tied_spherical']
-        if covariance_type not in allowed_covariance_types:
-            raise ValueError('Covariance type must be one of [%s]' % (', '.join(allowed_covariance_types)))
-        
-        self.tied_covariance = 'tied' in covariance_type 
-        
-        if self.tied_covariance:
-            self.covariance_type = covariance_type.split('_')[-1]
-        else:
-            self.covariance_type = covariance_type
+        self.covariance_init = covariance_init
+        self.covariance_type = covariance_type.split(':')
+
             
-            
-    def initialize_parameters(self, data, var=1.0):
+    def initialize_parameters(self, data):
+        """
+
+        Args:
+            data:
+
+        Returns:
+
+        """
         sampled = data.new(data.shape[0], self.n_clusters).random_(0, data.shape[1])
         sampled = data.new(np.arange(0, data.shape[0])).unsqueeze(1).expand(-1, sampled.shape[1])*data.shape[1] + sampled
         sampled = sampled.long()
         means = torch.index_select(data.view(-1, data.shape[-1]), 0, sampled.view(-1)).view(data.shape[0], sampled.shape[-1], -1)
         
-        var = data.new(data.shape[0], self.n_clusters, data.shape[-1]).fill_(var)
+        var = data.new(data.shape[0], self.n_clusters, data.shape[-1]).fill_(self.covariance_init)
         pi = data.new(data.shape[0], self.n_clusters).fill_(1./self.n_clusters)
         
-        return means, var, pi
+        return {'means': means,
+                'variance': var,
+                'prior': pi}
         
     def update_parameters(self, posteriors, data, weights):
+        """
+
+        Args:
+            posteriors:
+            data:
+            weights:
+
+        Returns:
+
+        """
         if not isinstance(weights, float):
             weights = weights.unsqueeze(1).unsqueeze(-1)
             num_examples = weights.sum(dim=2)
@@ -55,18 +72,29 @@ class GMM(nn.Module):
         distance = posteriors * torch.pow(distance, 2)
         updated_var = torch.sum(distance, dim=2)
 
-        if self.tied_covariance:
+        if 'tied' in self.covariance_type:
             updated_var = torch.sum(updated_var, dim=1, keepdim=True).expand(-1, updated_var.shape[1], -1)
             updated_var = (updated_var / (cluster_sizes.sum() + 1e-7))
         else:
             updated_var = updated_var / (cluster_sizes + 1e-7)
 
-        if self.covariance_type == 'spherical':
+        if 'spherical' in self.covariance_type:
             updated_var = torch.mean(updated_var, dim=-1, keepdim=True).expand(-1, -1, updated_var.shape[-1])
+
+        if 'fix' in self.covariance_type:
+            updated_var[:, :, :] = self.covariance_init
             
         return updated_means, updated_var, updated_pi
     
     def update_posteriors(self, likelihoods):
+        """
+
+        Args:
+            likelihoods:
+
+        Returns:
+
+        """
         #log-sum-exp trick https://www.xarg.org/2016/06/the-log-sum-exp-trick-in-machine-learning/
         max_value = likelihoods.max(dim=1, keepdim=True)[0]
         likelihoods_sum = max_value + torch.log((likelihoods - max_value).exp().sum(dim=1, keepdim=True))
@@ -74,10 +102,22 @@ class GMM(nn.Module):
         return posteriors, likelihoods
     
     def update_likelihoods(self, data, means, var, pi):
+        """
+
+        Args:
+            data:
+            means:
+            var:
+            pi:
+
+        Returns:
+
+        """
         num_batch = data.shape[0]
         num_examples = data.shape[1]
         num_features = data.shape[-1]
         num_clusters = means.shape[1]
+
         inv_covariance =  1. / (var + 1e-6)
         data = data.unsqueeze(1).expand(-1, 1, -1, -1)
         means = means.unsqueeze(2).expand(-1, -1, 1, -1)
@@ -95,18 +135,29 @@ class GMM(nn.Module):
         return likelihoods
     
     def forward(self, data, parameters=None, weights=1.0):
+        """
+
+        Args:
+            data:
+            parameters:
+            weights:
+
+        Returns:
+
+        """
         if parameters is None:
             parameters = self.initialize_parameters(data)
-        means, var, pi = parameters
+        means, var, pi = parameters['means'], parameters['variance'], parameters['prior']
 
         for i in range(self.n_iterations):
             likelihoods = self.update_likelihoods(data, means, var, pi)
             posteriors, likelihoods = self.update_posteriors(likelihoods)
             means, var, pi = self.update_parameters(posteriors, data, weights)
-            var = var + 1e-6 + self.covariance_min
-            if self.fix_covariance:
-                var[:, :, :] = self.covariance_min
+            var = var + 1e-6
+
 
         likelihoods = self.update_likelihoods(data, means, var, pi)
         posteriors, likelihoods = self.update_posteriors(likelihoods)
-        return likelihoods.permute(0, 2, 1), posteriors.permute(0, 2, 1), (means, var, pi)
+        return {'likelihoods': likelihoods.permute(0, 2, 1),
+                'assignments': posteriors.permute(0, 2, 1),
+                'parameters': (means, var, pi)}

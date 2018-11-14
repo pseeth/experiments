@@ -45,18 +45,17 @@ class KMeans(nn.Module):
         updated_means = (torch.sum(weighted_embeddings, dim=1) / torch.sum(assignments * weights, dim=1))
         return updated_means
     
-    def update_assignments(self, data, means, softmax=True):        
+    def update_assignments(self, data, means):
         data = data.unsqueeze(-1).expand(-1, -1, -1, 1)
         means = means.unsqueeze(1).expand(-1, 1, -1, -1)
         distance = -torch.pow(data - means, 2).sum(dim=2)
-        if softmax:
-            assignments = nn.functional.softmax(self.scale(distance), dim=-1)
-        else:
-            assignments = distance
+        assignments = nn.functional.softmax(self.scale(distance), dim=-1)
         return assignments
     
-    def forward(self, data, means=None, weights=1.0, last_softmax=True):
-        if means is None:
+    def forward(self, data, parameters=None):
+        if parameters is None:
+            means = None
+        if parameters['means'] is None:
             means = self.initialize_means(data)
         if means.shape[0] != data.shape[0]:
             means = means.expand(data.shape[0], -1, -1)
@@ -66,6 +65,7 @@ class KMeans(nn.Module):
             assignments = self.update_assignments(data, means)
             means = self.update_means(assignments, data, weights)
         
-        assignments = self.update_assignments(data, means, softmax=last_softmax)
+        assignments = self.update_assignments(data, means)
         means = means.permute(0, 2, 1)
-        return assignments, means
+        return {'assignments': assignments,
+                'parameters': means}
