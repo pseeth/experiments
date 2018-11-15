@@ -16,42 +16,33 @@ def weighted_cross_entropy(loss_function, spectrogram, source_masks, source_ibms
     loss = (losses * weights).sum() / weights.sum()
     return loss
 
+class DeepClusteringLoss(nn.Module):
+    def __init__(self):
+        super(DeepClusteringLoss, self).__init__()
 
-def affinity_cost(embedding, assignments, weights=None):
-    batch_size, num_points, embedding_size = embedding.size()
-    num_sources = assignments.size()[-1]
-    embedding = embedding.view(-1, embedding_size)
-    assignments = assignments.view(-1, num_sources)
+    def forward(self, embedding, assignments, weights):
+        batch_size, num_points, embedding_size = embedding.size()
+        num_sources = assignments.size()[-1]
+        embedding = embedding.view(-1, embedding_size)
+        assignments = assignments.view(-1, num_sources)
 
-    if weights.sum() < 0:
-        silence_mask = torch.sum(assignments.detach(), dim=-1, keepdim=True)
-        embedding = silence_mask * embedding
-
-        class_weights = nn.functional.normalize(torch.sum(assignments.detach(), dim=-2),
-                                                p=1,
-                                                dim=-1).unsqueeze(0)
-        class_weights = 1.0 / (torch.sqrt(class_weights) + 1e-7)
-        class_weights = torch.matmul(assignments.detach(), class_weights.transpose(1, 0))
-        weights = class_weights
-        norm = torch.sum(weights ** 2) ** 2
-    else:
         norm = torch.sum(torch.sum(weights**2, dim=1)**2)
 
-    weights = weights.view(batch_size, num_points, 1)
-    embedding = embedding.view(batch_size, num_points, embedding_size)
-    assignments = assignments.view(batch_size, num_points, num_sources)
+        weights = weights.view(batch_size, num_points, 1)
+        embedding = embedding.view(batch_size, num_points, embedding_size)
+        assignments = assignments.view(batch_size, num_points, num_sources)
 
-    assignments = weights.expand_as(assignments) * assignments
-    embedding = weights.expand_as(embedding) * embedding
+        assignments = weights.expand_as(assignments) * assignments
+        embedding = weights.expand_as(embedding) * embedding
 
-    embedding_transpose = embedding.transpose(2, 1)
-    assignments_transpose = assignments.transpose(2, 1)
+        embedding_transpose = embedding.transpose(2, 1)
+        assignments_transpose = assignments.transpose(2, 1)
 
-    loss_est = torch.sum(torch.matmul(embedding_transpose, embedding) ** 2)
-    loss_est_true = torch.sum(torch.matmul(embedding_transpose, assignments) ** 2)
-    loss_true = torch.sum(torch.matmul(assignments_transpose, assignments) ** 2)
-    loss = (loss_est - 2 * loss_est_true + loss_true) / norm.detach()
-    return loss
+        loss_est = torch.sum(torch.matmul(embedding_transpose, embedding) ** 2)
+        loss_est_true = torch.sum(torch.matmul(embedding_transpose, assignments) ** 2)
+        loss_true = torch.sum(torch.matmul(assignments_transpose, assignments) ** 2)
+        loss = (loss_est - 2 * loss_est_true + loss_true) / norm.detach()
+        return loss
 
 
 def sparse_orthogonal_loss(attractors, weights=(1., 1.)):
