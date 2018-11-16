@@ -62,12 +62,12 @@ class Trainer():
                 model_dict = torch.load(model)
                 model = model_dict['model']
                 model.load_state_dict(model_dict['state_dict'])
-
-        self.device = (torch.device('cpu') if options['device'] == 'cuda'
-            else torch.device('cuda'))
-        self.model = model.to(self.device)
+        self.model = model
+        self.device = (torch.device('cuda') if options['device'] == 'cuda'
+            else torch.device('cpu'))
+        self.model = self.model.to(self.device)
         self.module = self.model
-        if options['data_parallel'] and options['device'] == 'cpu':
+        if options['data_parallel'] and options['device'] == 'cuda':
             self.model = nn.DataParallel(model)
             self.module = self.model.module
         self.model.train()
