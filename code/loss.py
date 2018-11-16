@@ -21,6 +21,8 @@ class DeepClusteringLoss(nn.Module):
         super(DeepClusteringLoss, self).__init__()
 
     def forward(self, embedding, assignments, weights):
+        embedding = embedding.view(embedding.shape[0], -1, embedding.shape[-1])
+        assignments = assignments.view(assignments.shape[0], -1, assignments.shape[-1])
         batch_size, num_points, embedding_size = embedding.size()
         num_sources = assignments.size()[-1]
         embedding = embedding.view(-1, embedding_size)

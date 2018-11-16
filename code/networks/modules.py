@@ -233,7 +233,7 @@ class Clusterer(nn.Module):
 
 
 class CentroidGenerator(nn.Module):
-    def __init__(self, embedding_size, centroid_type, activation):
+    def __init__(self, embedding_size, centroid_type, activation, covariance_type):
         super(CentroidGenerator, self).__init__()
         return
 

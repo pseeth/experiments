@@ -1,13 +1,13 @@
 import torch
 from torch import nn
 from tqdm import trange, tqdm
-import utils
 import multiprocessing
 from tensorboardX import SummaryWriter
 from enum import Enum
 from torch.utils.data import sampler, DataLoader
-from .loss import DeepClusteringLoss, PermutationInvariantLoss
+from loss import DeepClusteringLoss, PermutationInvariantLoss
 import numpy as np
+import networks
 
 class Samplers(Enum):
     SEQUENTIAL = sampler.SequentialSampler
@@ -26,8 +26,8 @@ class Optimizers(Enum):
     SGD = torch.optim.SGD
 
 OutputTargetMap = {
-    'estimates': ('sources'),
-    'embedding': ('assignments', 'weights')
+    'estimates': ['sources'],
+    'embedding': ['assignments', 'weights']
 }
 
 class Trainer():
@@ -35,7 +35,6 @@ class Trainer():
                  output_folder,
                  train_data,
                  validation_data,
-                 input_keys,
                  model,
                  loss_tuples,
                  options=None):
@@ -50,50 +49,64 @@ class Trainer():
             'device': 'cuda' if torch.cuda.is_available() else 'cpu',
             'sample_strategy': 'sequential',
             'data_parallel': torch.cuda.device_count() > 1,
-            'weight_decay': 0.0
+            'weight_decay': 0.0,
             'optimizer': 'adam'
         }
 
         options = {**defaults, **(options if options else {})}
-        options['sample_strategy'] = Samplers[options['sample_strategy'].to_upper()]
 
-        self.device = (torch.device('cpu') if options['device'] == 'cpu'
+        if type(model) is str:
+            if '.json' in model:
+                model = networks.SeparationModel(model)
+            else:
+                model_dict = torch.load(model)
+                model = model_dict['model']
+                model.load_state_dict(model_dict['state_dict'])
+
+        self.device = (torch.device('cpu') if options['device'] == 'cuda'
             else torch.device('cuda'))
-        if options['data_parallel']:
-            model = nn.DataParallel(model)
-
         self.model = model.to(self.device)
-        self.module = model.module if options['data_parallel'] else model
+        self.module = self.model
+        if options['data_parallel'] and options['device'] == 'cpu':
+            self.model = nn.DataParallel(model)
+            self.module = self.model.module
+        self.model.train()
+
         self.writer = SummaryWriter(log_dir=output_folder)
-        self.loss_dictionary = {target: (LossFunctions[fn.to_upper()](), weight)
+        self.loss_dictionary = {target: (LossFunctions[fn.upper()].value(), weight)
                             for (fn, target, weight) in loss_tuples}
         self.loss_keys = sorted(list(self.loss_dictionary))
-        self.input_keys = input_keys
         self.options = options
 
-        self.dataloaders = {
-            'training': self.create_dataloader(train_data),
-            'validation': self.create_dataloader(validation_data)
-        }
+        #self.dataloaders = {
+        #    'training': self.create_dataloader(train_data),
+        #    'validation': self.create_dataloader(validation_data)
+        #}
 
         self.optimizer = self.create_optimizer(self.model, self.options)
 
     def create_dataloader(self, dataset):
+        _sampler = Samplers[self.options['sample_strategy'].upper()].value(dataset)
         dataloader = DataLoader(dataset,
                                 batch_size=self.options['batch_size'],
                                 num_workers=self.options['num_workers'],
-                                sampler=self.options['sample_strategy'])
+                                sampler=_sampler)
         return dataloader
 
     def create_optimizer(self, model, options):
         parameters = filter(lambda p: p.requires_grad, model.parameters())
-        optimizer = Optimizers[options['optimizer'].to_upper()](
+        optimizer = Optimizers[options['optimizer'].upper()].value(
                                 parameters,
                                 lr=options['learning_rate'],
                                 weight_decay=options['weight_decay'])
         return optimizer
 
     def calculate_loss(self, outputs, targets):
+        if self.module.layers['mel_projection'].num_mels > 0:
+            if 'assignments' in targets:
+                targets['assignments'] = self.module.project_assignments(targets['assignments'])
+            if 'weights' in targets:
+                targets['weights'] = self.module.project_assignments(targets['weights'])
         loss = []
         for key in self.loss_keys:
             loss_function = self.loss_dictionary[key][0]

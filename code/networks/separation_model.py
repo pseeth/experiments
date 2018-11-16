@@ -1,13 +1,14 @@
 from torch import nn
 import json
 from . import modules
+import torch
 
 class SeparationModel(nn.Module):
     def __init__(self, config):
         """
         SeparationModel takes a configuration file or dictionary that describes the model
         structure, which is some combination of MelProjection, Embedding, RecurrentStack,
-        ConvolutionalStack, and other modules found in modules.py. The configuration file
+        ConvolutionalStack, and other modules found in networks.modules. The configuration file
         can be built using the helper functions in networks.helpers:
             - build_dpcl_config: Builds the original deep clustering network, mapping each
                 time-frequency point to an embedding of some size. Takes as input a
@@ -91,10 +92,27 @@ class SeparationModel(nn.Module):
             layer = self.layers[connection[0]]
             input_data = []
             for c in connection[1]:
-                if c in self.input:
-                    input_data.append(data[c])
-                else:
-                    input_data.append(output[c])
+                _data = data[c] if c in self.input else output[c]
+                input_data.append(_data)
             output[connection[0]] = layer(*input_data)
         output = {o: output[o] for o in self.output_keys}
         return output
+
+    def project_assignments(self, data):
+        if 'mel_projection' in self.layers:
+            data = self.layers['mel_projection'](data)
+            data = data.clamp(0.0, 1.0)
+        return data
+
+    def save(self, location):
+        """
+        Saves a SeparationModel into a location into a dictionary with the
+        weights and model configuration.
+        Args:
+            location: (str) Where you want the model saved, as a path.
+
+        Returns:
+
+        """
+        torch.save({'state_dict': self.state_dict(),
+                    'model': self}, location)
