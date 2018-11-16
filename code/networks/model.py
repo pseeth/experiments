@@ -50,7 +50,7 @@ class SeparationModel(nn.Module):
             >>> config = helpers.build_chimera_config(args)
             >>> with open('config.json', 'w') as f:
             >>>    json.dump(config, f)
-            >>> model = SeparationModel('chimera_config.json')
+            >>> model = SeparationModel('config.json')
             >>> test_data = np.random.random((1, 100, 512))
             >>> data = torch.from_numpy(test_data).float()
             >>> output = model({'log_spectrogram': data,
