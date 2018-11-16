@@ -15,7 +15,8 @@ class MelProjection(nn.Module):
         Args:
             sample_rate: (int) Sample rate of audio for computing the mel filters.
             num_frequencies: (int) Number of frequency bins in input spectrogram.
-            num_mels: (int) Number of mel bins in output mel spectrogram.
+            num_mels: (int) Number of mel bins in output mel spectrogram. if num_mels < 0, this does nothing
+                other than clamping the output of clamp is True
             direction: (str) Which direction to go in (either 'forward' - to mel, or 'backward' - to frequencies).
                 Defaults to 'forward'.
             clamp: (bool) Whether to clamp the output values of the transform between 0.0 and 1.0. Used for transforming
@@ -23,31 +24,26 @@ class MelProjection(nn.Module):
             trainable: (bool) Whether the mel transform can be adjusted by the optimizer. Defaults to False.
         """
         super(MelProjection, self).__init__()
-
-        self.add_module('transform', nn.Linear(num_frequencies, num_mels))
-        self.add_module('inverse_transform', nn.Linear(num_mels, num_frequencies))
+        self.num_mels = num_mels
         if direction not in ['backward', 'forward']:
             raise ValueError("direction must be one of ['backward', 'forward']!")
         self.direction = direction
         self.clamp = clamp
 
-        mel_filters = librosa.filters.mel(sample_rate, 2 * (num_frequencies - 1), num_mels)
-        mel_filters = (mel_filters.T / mel_filters.sum(axis=1)).T
-        inverse_mel_filters = np.linalg.pinv(mel_filters)
+        if self.num_mels > 0:
+            shape = (num_frequencies, num_mels) if self.direction == 'forward' else (num_mels, num_frequencies)
+            self.add_module('transform', nn.Linear(*shape))
 
-        for name, param in self.transform.named_parameters():
-            if 'bias' in name:
-                nn.init.constant_(param, 0.0)
-            if 'weight' in name:
-                param.data = torch.from_numpy(mel_filters).float()
-            param.requires_grad_(trainable)
+            mel_filters = librosa.filters.mel(sample_rate, 2 * (num_frequencies - 1), num_mels)
+            mel_filters = (mel_filters.T / mel_filters.sum(axis=1)).T
+            filter_bank = mel_filters if self.direction == 'forward' else np.linalg.pinv(mel_filters)
 
-        for name, param in self.inverse_transform.named_parameters():
-            if 'bias' in name:
-                nn.init.constant_(param, 0.0)
-            if 'weight' in name:
-                param.data = torch.from_numpy(inverse_mel_filters).float()
-            param.requires_grad_(trainable)
+            for name, param in self.transform.named_parameters():
+                if 'bias' in name:
+                    nn.init.constant_(param, 0.0)
+                if 'weight' in name:
+                    param.data = torch.from_numpy(filter_bank).float()
+                param.requires_grad_(trainable)
 
     def forward(self, data):
         """
@@ -58,18 +54,17 @@ class MelProjection(nn.Module):
             Mel-spectrogram or time-frequency representation of shape:
                 (batch_size, sequence_length, num_mels or num_frequencies, num_sources). num_sources squeezed if 1.
         """
-        if len(data.shape) < 4:
-            data.unsqueeze(-1)
 
-        data = data.permute(0, 1, 3, 2)
-        if self.direction == 'forward':
-            output = self.transform(data)
-        if self.direction == 'backward':
-            data = self.inverse_transform(data)
-        data = data.permute(0, 1, 3, 2)
+        if self.num_mels > 0:
+            if len(data.shape) < 4:
+                data = data.unsqueeze(-1)
 
-        if data.shape[-1] == 1:
-            data.squeeze(-1)
+            data = data.permute(0, 1, 3, 2)
+            data = self.transform(data)
+            data = data.permute(0, 1, 3, 2)
+
+            if data.shape[-1] == 1:
+                data = data.squeeze(-1)
 
         if self.clamp:
             data = data.clamp(0.0, 1.0)
@@ -77,7 +72,7 @@ class MelProjection(nn.Module):
 
 
 class Embedding(nn.Module):
-    def __init__(self, num_features, hidden_size, embedding_size, activation=''):
+    def __init__(self, num_features, hidden_size, embedding_size, activation):
         """
         Maps output from an audio representation function (e.g. RecurrentStack, ConvolutionalStack) to an embedding
         space. The output shape is (batch_size, sequence_length, num_features, embedding_size). The embeddings can
@@ -97,7 +92,9 @@ class Embedding(nn.Module):
         """
         super(Embedding, self).__init__()
         self.add_module('linear', nn.Linear(hidden_size, num_features * embedding_size))
-        self.activation = activation.split(':')
+        self.num_features = num_features
+        self.activation = activation
+        self.embedding_size = embedding_size
 
     def forward(self, data):
         """
@@ -120,8 +117,14 @@ class Embedding(nn.Module):
         if 'unit_norm' in  self.activation:
             data = nn.functional.normalize(data, dim=-1, p=2)
 
-        return data
+        return data.view(data.shape[0], -1, self.num_features, self.embedding_size)
 
+class Mask(nn.Module):
+    def __init__(self):
+        super(Mask, self).__init__()
+
+    def forward(self, mask, magnitude_spectrogram):
+        return mask * magnitude_spectrogram.unsqueeze(-1)
 
 class RecurrentStack(nn.Module):
     def __init__(self, num_features, hidden_size, num_layers, bidirectional, dropout, rnn_type='lstm'):

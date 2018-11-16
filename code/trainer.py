@@ -7,7 +7,7 @@ from tensorboardX import SummaryWriter
 from enum import Enum
 from torch.utils.data import sampler, DataLoader
 from .loss import DeepClusteringLoss, PermutationInvariantLoss
-from collections import namedtuple
+import numpy as np
 
 class Samplers(Enum):
     SEQUENTIAL = sampler.SequentialSampler
@@ -37,7 +37,6 @@ class Trainer():
                  validation_data,
                  input_keys,
                  model,
-                 optimizer,
                  loss_tuples,
                  options=None):
 
@@ -52,9 +51,10 @@ class Trainer():
             'sample_strategy': 'sequential',
             'data_parallel': torch.cuda.device_count() > 1,
             'weight_decay': 0.0
+            'optimizer': 'adam'
         }
 
-        options = {**defaults, **(options if not options else {})}
+        options = {**defaults, **(options if options else {})}
         options['sample_strategy'] = Samplers[options['sample_strategy'].to_upper()]
 
         self.device = (torch.device('cpu') if options['device'] == 'cpu'
@@ -102,6 +102,10 @@ class Trainer():
             arguments = [outputs[key]] + [targets[t] for t in target_keys]
             loss.append(weight * loss_function(*arguments))
         return loss
+
+    def check_loss(self, loss):
+        if np.isnan(loss.item()):
+            raise ValueError("Loss went to nan - aborting training.")
 
     def resume(self):
         return

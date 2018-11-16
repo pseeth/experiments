@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
-ssh -f -N -L 6006:localhost:6006 cortex
-ssh -f -N -L 8889:0.0.0.0:8888 cortex
+autossh -M 6006 -f -nNT -L 6006:localhost:6006 cortex
+autossh -M 8888 -f -nNT -L 8888:0.0.0.0:8888 cortex
