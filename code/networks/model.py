@@ -12,14 +12,12 @@ class SeparationModel(nn.Module):
             - build_dpcl_config: Builds the original deep clustering network, mapping each
                 time-frequency point to an embedding of some size. Takes as input a
                 log_spectrogram.
-
             - build_mi_config: Builds a "traditional" mask inference network that maps the mixture
-                spectrogram to source estimates.  Takes as input a log_spectrogram, and a
+                spectrogram to source estimates.  Takes as input a log_spectrogram and a
                 magnitude_spectrogram.
-
             - build_chimera_config: Builds a Chimera network with a mask inference head and a
                 deep clustering head to map. A combination of MI and DPCL. Takes as input a
-                log_spectrogram, and a magnitude_spectrogram.
+                log_spectrogram and a magnitude_spectrogram.
 
         References:
             Hershey, J. R., Chen, Z., Le Roux, J., & Watanabe, S. (2016, March).
@@ -52,8 +50,7 @@ class SeparationModel(nn.Module):
             >>> config = helpers.build_chimera_config(args)
             >>> with open('config.json', 'w') as f:
             >>>    json.dump(config, f)
-            >>>
-            >>> model = SeparationModel('networks/mi_config.json')
+            >>> model = SeparationModel('chimera_config.json')
             >>> test_data = np.random.random((1, 100, 512))
             >>> data = torch.from_numpy(test_data).float()
             >>> output = model({'log_spectrogram': data,
@@ -80,7 +77,6 @@ class SeparationModel(nn.Module):
 
     def forward(self, data):
         """
-
         Args:
             data: (dict) a dictionary containing the input data for the model. Should match the input_keys
                 in self.input.
