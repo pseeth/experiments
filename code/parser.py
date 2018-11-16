@@ -1,130 +1,388 @@
-import torch
-from torch import nn
-from torch.utils.data import DataLoader, sampler, ConcatDataset
-from networks import DeepAttractor, MaskEstimation
-import utils
-from loss import *
-from dataset import ScaperLoader
-from wsj_dataset import WSJ0
-from tqdm import trange, tqdm
-from tensorboardX import SummaryWriter
-import numpy as np
 import argparse
-import warnings
-import os
-import json
-from validate import validate
-import subprocess
-import time
-import pprint
 
-pp = pprint.PrettyPrinter(indent=4)
-torch.manual_seed(0)
-warnings.simplefilter(action='ignore', category=FutureWarning)
-tqdm.monitor_interval = 0
+def folders(parser: argparse.ArgumentParser):
+    folders = parser.add_argument_group(
+        'folders',
+        description='Folder paths for training, validation & output',
+    )
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--log_dir", default=None)
-parser.add_argument("--training_folder", default='/mm1/seetharaman/generated/speech/two_speaker/training')
-parser.add_argument("--validation_folder", default='/mm1/seetharaman/generated/speech/two_speaker/validation')
-parser.add_argument("--dataset_type", default='scaper')
-parser.add_argument("--n_clusters", default=2)
-parser.add_argument("--checkpoint", default=None)
-parser.add_argument("--disable-training-stats", action='store_true')
-parser.add_argument("--loss_function", default='l1')
-parser.add_argument("--target_type", default='psa')
-parser.add_argument("--projection_size", default=0)
-parser.add_argument("--activation_type", default='sigmoid')
-parser.add_argument("--num_clustering_iterations", default=5)
-parser.add_argument("--n_fft", default=256)
-parser.add_argument("--hop_length", default=64)
-parser.add_argument("--hidden_size", default=600)
-parser.add_argument("--num_layers", default=4)
-parser.add_argument("--dropout", default=.3)
-parser.add_argument("--embedding_size", default=40)
-parser.add_argument("--learning_rate", default=1e-3)
-parser.add_argument("--batch_size", default=40)
-parser.add_argument("--initial_length", default=1.0)
-parser.add_argument("--curriculum_learning", action='store_true')
-parser.add_argument("--num_epochs", default=75)
-parser.add_argument("--optimizer", default='adam')
-parser.add_argument("--group_sources", default='')
-parser.add_argument("--ignore_sources", default='')
-parser.add_argument("--source_labels", default='')
-parser.add_argument("--baseline", action='store_true')
-parser.add_argument("--weight_decay", default=0.0)
-parser.add_argument("--overwrite", action='store_true')
-parser.add_argument("--resume", action='store_true')
-parser.add_argument("--normalize_embeddings", action='store_true')
-parser.add_argument("--threshold", default=None)
-parser.add_argument("--num_workers", default=10)
-parser.add_argument("--sample_strategy", default='sequential')
-parser.add_argument("--embedding_activation", default='none')
-parser.add_argument("--clustering_type", default='kmeans')
-parser.add_argument("--unfold_iterations", action='store_true')
-parser.add_argument("--covariance_type", choices=['spherical', 'diag', 'tied_spherical', 'tied_diag'], default='diag')
-parser.add_argument("--covariance_min", default=.5)
-parser.add_argument("--fix_covariance", action='store_true')
-parser.add_argument("--num_gaussians_per_source", default=1)
-parser.add_argument("--weight_method", default='magnitude')
-parser.add_argument("--create_cache", action='store_true')
-parser.add_argument("--generate_plots", action='store_true')
+    folders.add_argument(
+        'training_folder',
+        nargs='*',
+        help='Path(s) to folder(s) containing training data',
+    )
 
-args = parser.parse_args()
+    folders.add_argument(
+        '--validation_folder',
+        type=str.lower,
+        help='Path to folder containing validation data',
+    )
 
-params = {
-    'n_fft': int(args.n_fft),
-    'input_size': int(int(args.n_fft)/2 + 1),
-    'hop_length': int(args.hop_length),
-    'hidden_size': int(args.hidden_size),
-    'num_layers': int(args.num_layers),
-    'dropout': float(args.dropout),
-    'embedding_size': int(args.embedding_size),
-    'projection_size': int(args.projection_size),
-    'activation_type': args.activation_type,
-    'embedding_activation': args.embedding_activation,
-    'n_clusters': int(args.n_clusters),
-    'learning_rate': float(args.learning_rate),
-    'batch_size': int(args.batch_size),
-    'compute_training_stats': args.disable_training_stats,
-    'target_type': args.target_type,
-    'training_folder': args.training_folder.split(':'),
-    'validation_folder': args.validation_folder,
-    'dataset_type': args.dataset_type,
-    'checkpoint': args.checkpoint,
-    'loss_function': args.loss_function,
-    'attractor_loss_function': args.attractor_loss_function,
-    'attractor_alpha': float(args.attractor_loss_weight),
-    'attractor_function_type': args.attractor_function_type,
-    'num_clustering_iterations': int(args.num_clustering_iterations),
-    'use_enhancement': args.use_enhancement,
-    'optimizer': args.optimizer,
-    'num_epochs': int(args.num_epochs),
-    'group_sources': args.group_sources.split('_') if len(args.group_sources) > 0 else [],
-    'ignore_sources': args.ignore_sources.split('_') if len(args.ignore_sources) > 0 else [],
-    'source_labels': args.source_labels.split('_') if len(args.source_labels) > 0 else [],
-    'normalize_embeddings': args.normalize_embeddings,
-    'initial_length': float(args.initial_length),
-    'threshold': float(args.threshold) if args.threshold is not None else None,
-    'num_workers': int(args.num_workers),
-    'sample_rate': None,
-    'training_stats': None,
-    'weight_type': None,
-    'lr_decay': .5,
-    'l2_reg': float(args.weight_decay),
-    'beta1': .9,
-    'beta2': .999,
-    'patience': 5,
-    'save_checkpoints': True,
-    'validate': True,
-    'grad_clip': 100,
-    'clustering_type': args.clustering_type,
-    'covariance_type': args.covariance_type,
-    'covariance_min': float(args.covariance_min),
-    'fix_covariance': args.fix_covariance,
-    'num_gaussians_per_source': int(args.num_gaussians_per_source),
-    'use_likelihoods': args.use_likelihoods,
-    'curriculum_learning': args.curriculum_learning,
-    'weight_method': args.weight_method,
-    'create_cache': args.create_cache
-}
+    folders.add_argument(
+        '--output_folder',
+        type=str.lower,
+        help=(
+            'Path to folder to write output to (this includes logs &'
+            ' checkpoints)'
+        ),
+    )
+
+def audio_processing(parser: argparse.ArgumentParser):
+    audio_processing = parser.add_argument_group(
+        'audio processing',
+        # TODO: clarify wording
+        description='Parameters for audio pre-processing',
+    )
+
+    audio_processing.add_argument(
+        '--n_fft',
+        type=int,
+        default=256,
+        # TODO: clarify wording
+        help='Number of samples per fft (Fast Fourier Transform)',
+    )
+
+    audio_processing.add_argument(
+        '--hop_length',
+        type=int,
+        default=64,
+        # TODO: clarify wording
+        help='Number of samples to shift fft (Fast Fourier Transofrm) window',
+    )
+
+    # TODO: mel projection size? is this in the right arg group?
+    audio_processing.add_argument(
+        '--projection_size',
+        type=int,
+        default=0,
+        help='?', # TODO: clarify wording
+    )
+
+    audio_processing.add_argument(
+        '--db_threshold',
+        type=float,
+        default=-80,
+        help=(
+            'Decibel (db) threshold to retain TF (time-frequency) bins. For'
+            ' example, if given `10`, all bins with lower magnitudes will be'
+            ' ignored.'
+        ),
+    )
+
+def dataset(parser: argparse.ArgumentParser):
+    dataset = parser.add_argument_group(
+        'dataset',
+        description='Parameters manipulating the given dataset',
+    )
+
+    dataset.add_argument(
+        '--dataset_type',
+        type=str.lower,
+        default=['scaper'],
+        choices=['scaper', 'wsj'],
+        help=(
+            'Labels identifying sources in your dataset. List only the labels'
+            ' for sources you want to separate'
+        ),
+    )
+
+    dataset.add_argument(
+        '--source_labels',
+        type=str.lower,
+        nargs='+',
+        help=(
+            'Labels identifying sources in your dataset. List only the labels'
+            ' for sources you want to separate'
+        ),
+    )
+
+    dataset.add_argument(
+        '--sample_strategy',
+        default=['sequential'],
+        type=str.lower,
+        choices=['sequential', 'random'],
+        help='Strategy for sampling training examples',
+    )
+
+    dataset.add_argument(
+        '--group_sources',
+        type=str.lower,
+        nargs='+',
+        action='append',
+        help=(
+            'Specify multiple source labels to treat them as one source. This'
+            ' option requires specification of the `--source_labels` option'
+            ' and any grouped sources *must* be listed in the values passed'
+            ' to `--source_labels`. Multiple groupings are allowed, each with'
+            ' separate usages of this flag. For example, if you have source '
+            ' labels - bass, guitar, drums, violin, and vocals - and you would'
+            ' like to treat vocals as one source, bass and guitar combined as'
+            ' another, and drums and violin as a third:'
+            ' `... --source_labels vocals bass guitar violin drums'
+            ' --group_sources bass guitar --group_sources violin drums`.'
+        ),
+    )
+
+def representation(parser: argparse.ArgumentParser):
+    representation = parser.add_argument_group(
+        'representation',
+        description='Parameters specific to chosen representations',
+    )
+
+    # TODO: separate gaussian/covariance options to another argument group?
+
+    representation.add_argument(
+        '--num_gaussians_per_source',
+        type=int,
+        default=1,
+        # TODO: clarify wording
+        help='Number of gaussians to use to model each source',
+    )
+
+    representation.add_argument(
+        '--covariance_type',
+        default='diag',
+        choices=['spherical', 'diag', 'tied_spherical', 'tied_diag'],
+        help='Minimum covariance', # TODO: clarify wording
+    )
+
+    representation.add_argument(
+        '--covariance_min',
+        type=float,
+        default=.5,
+        help='Minimum covariance', # TODO: clarify wording
+    )
+
+    representation.add_argument(
+        '--fix_covariance',
+        action='store_true',
+        help='Whether or not to fix covariance', # TODO: clarify wording
+    )
+
+def hyperparameters(parser: argparse.ArgumentParser):
+    hyperparameters = parser.add_argument_group(
+        'hyperparameters',
+        description='Parameters to dictate training behavior',
+    )
+
+    hyperparameters.add_argument(
+        '--num_epochs',
+        type=int,
+        default=100,
+        help=(
+            'Number of training epochs. One epoch means one run through all'
+            ' given training data'
+        ),
+    )
+    hyperparameters.add_argument(
+        '--learning_rate', '-lr',
+        type=float,
+        default=1e-3,
+        help='Weighting of backprop delta' # TODO: clarify wording
+    )
+    hyperparameters.add_argument(
+        '--learning_rate_decay',
+        type=float,
+        default=.5,
+        help=(
+            # TODO: clarify wording
+            'Rate at which to decay learning rate. A learning rate of .5'
+            ' means the learning rate is halved every  <patience=5> epochs'
+            ' that the change in the loss function is below some epsilon'
+        )
+    )
+    hyperparameters.add_argument(
+        '--patience',
+        type=int,
+        default=5,
+        # TODO: clarify wording
+        help=(
+            'Number of epochs of minimal (within some epsilon) change in'
+            ' loss function required before decaying learning rate'
+        )
+    )
+    hyperparameters.add_argument(
+        '--batch_size',
+        type=int,
+        default=5,
+        # TODO: clarify wording
+        help='Number of training samples per batch'
+    )
+    hyperparameters.add_argument(
+        '--num_workers',
+        type=int,
+        default=5,
+        help='?', # TODO: clarify wording
+    )
+
+    # TODO: make sure to lowercase given function and confirm it's valid,
+    # validate that weight is a float, and validate target (limited set of
+    # choices?)
+    hyperparameters.add_argument(
+        '--loss_function_classes_targets_weights', '-lfctw',
+        type=str.lower, # lowercase choices (ignores numbers)
+        nargs=3,
+        action='append',
+        metavar=('FUNCTION', 'TARGET', 'WEIGHT'),
+        # TODO: clarify wording
+        help=(
+            'Triple of loss function, target model output on which to compute'
+            " loss function and weight. `FUNCTION` may be any of the following:"
+            " ['L1, 'DPCL', 'MSE', 'KL']. Multiple loss function triples may be"
+            ' specified, each triple to its own `-lfctw` flag. E.g. to specify'
+            ' two different loss functions:'
+            '`... -lfctw L1 masks .4 -lfctw DPCL embeddings .6`'
+        ),
+    )
+
+    hyperparameters.add_argument(
+        '--optimizer',
+        type=str.lower, # allow specification of choices with any casing
+        default='adam',
+        choices=['adam', 'rmsprop', 'sgd'],
+        help='Optimizer for gradient descent', # TODO: clarify wording
+    )
+
+    hyperparameters.add_argument(
+        '--hidden_size',
+        type=int,
+        default=600,
+        help='Size of hidden layers (per layer?)', # TODO: clarify wording
+    )
+
+    hyperparameters.add_argument(
+        '--num_layers',
+        type=int,
+        default=4,
+        help='Number of (hidden?) layers', # TODO: clarify wording
+    )
+
+    hyperparameters.add_argument(
+        '--dropout',
+        type=float,
+        default=.3,
+        help='Fraction of units to drop (per epoch?)', # TODO: clarify wording
+    )
+
+    hyperparameters.add_argument(
+        '--embedding_size',
+        type=int,
+        default=40,
+        help='Number of dimensions for embedding output',
+    )
+
+    hyperparameters.add_argument(
+        '--clustering_type',
+        default='kmeans',
+        choices=['kmeans', 'gmm'], # TODO: what choices here?
+        help='Type of clustering to perform on embeddings',
+    )
+
+    hyperparameters.add_argument(
+        '--unfold_iterations',
+        action='store_true',
+        help='?', # TODO: clarify wording
+    )
+
+    hyperparameters.add_argument(
+        '--activation_type',
+        type=str.lower,
+        default='sigmoid',
+        choices=['sigmoid', 'relu'], # TODO: what choices here?
+        help='?', # TODO: clarify wording
+    )
+
+    hyperparameters.add_argument(
+        '--curriculum_learning',
+        action='store_true',
+        # TODO: clarify wording
+        help='Whether or not to perform curriculum learning',
+    )
+
+    hyperparameters.add_argument(
+        '--weight_method',
+        type=str.lower,
+        default='magnitude',
+        choices=['magnitude'], # TODO: what choices here?
+        help=(
+            'Method by which to weight relative importance of accurately'
+            ' predicting each TF (time-frequency) bin. Given `magnitude`,'
+            ' training prioritizes accurately predicting louder bins.'
+        ),
+    )
+
+    hyperparameters.add_argument(
+        '--num_clustering_iterations',
+        type=int,
+        default=5,
+        # TODO: clarify wording
+        help='Number of iterations of clustering to perform',
+    )
+
+    hyperparameters.add_argument(
+        '--initial_length',
+        type=float,
+        default=1.0,
+        # TODO: clarify wording
+        help='Fraction of initial length to use (for curriculum learning)',
+    )
+
+    # TODO: better location for this?
+    hyperparameters.add_argument(
+        '--target_type',
+        type=str.lower,
+        default='psa',
+        choices=['psa', 'msa', 'ibm'],
+        help='Mask approximation method', # TODO: clarify wording
+    )
+
+    hyperparameters.add_argument(
+        '--embedding_activation',
+        default='none',
+        help='?', # TODO: clarify wording
+    )
+
+    hyperparameters.add_argument(
+        '--weight_decay',
+        type=float,
+        default=0.0,
+        help='For L2 regularization', # TODO: clarify wording
+    )
+
+def miscellaneous(parser: argparse.ArgumentParser):
+    parser.add_argument(
+        '--generate_plots',
+        action='store_true',
+        # TODO: clarify wording
+        help='Whether or not to generate plots (of accuracy?)'
+    )
+
+    parser.add_argument(
+        '--create_cache',
+        action='store_true',
+        help='Whether or not to cache ?' # TODO: clarify wording
+    )
+
+def toy_parser():
+    parser = argparse.ArgumentParser(
+        description=(
+            'TUSSL: A framework for training deep net based audio'
+            ' source separation'
+        ),
+        # TODO: also use `MetavarTypeHelpFormatter` somehow?
+        formatter_class = argparse.ArgumentDefaultsHelpFormatter
+
+    )
+
+    folders(parser)
+    hyperparameters(parser)
+    representation(parser)
+    audio_processing(parser)
+    dataset(parser)
+
+    # TODO: post process parsed args to confirm valid loss_function triples
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    print(toy_parser())
