@@ -72,7 +72,7 @@ class Trainer():
         self.model.train()
 
         self.writer = SummaryWriter(log_dir=output_folder)
-        self.loss_dictionary = {target: (LossFunctions[fn.upper()].value(), weight)
+        self.loss_dictionary = {target: (LossFunctions[fn.upper()].value(), float(weight))
                             for (fn, target, weight) in loss_tuples}
         self.loss_keys = sorted(list(self.loss_dictionary))
         self.options = options
