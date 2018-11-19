@@ -1,6 +1,12 @@
 popper_logs
 popper_status
 .ipynb_checkpoints
-.pyc
+*.pyc
 data
 runs
+.idea
+*.ipynb
+*.DS_STORE
+DOCKER
+.mypy_cache
+*.swp

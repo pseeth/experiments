@@ -1,0 +1,9 @@
+{
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/.ipynb_checkpoints": true
+    },
+    "python.linting.pylintEnabled": false,
+    "python.linting.mypyEnabled": true,
+    "python.linting.enabled": true
+}

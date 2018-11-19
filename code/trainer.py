@@ -38,7 +38,6 @@ class Trainer():
                  model,
                  loss_tuples,
                  options=None):
-
         defaults = {
             'num_epochs': 100,
             'learning_rate': 1e-3,
@@ -129,9 +128,6 @@ class Trainer():
                 data[key] = data[key].float().to(self.device)
                 if key in self.input_keys:
                     data[key] = data[key.requires_grad_()]
-
-
-
 
         return
 
