@@ -1,0 +1,16 @@
+{
+  "training_folder": {
+    "nargs": "*",
+    "help": "Path(s) to folder(s) contianing training data"
+  }
+  "validation_folder": {
+    "nargs": "*",
+    type="str.lower",
+    "help": "Path to folder containing validation data"
+  }
+  "validation_folder": {
+    type="str.lower",
+    "help": 'Path to folder to write output to (this includes logs &'
+            ' checkpoints)'
+  }
+}

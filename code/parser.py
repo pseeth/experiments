@@ -244,34 +244,6 @@ def hyperparameters(parser: argparse.ArgumentParser):
     )
 
     hyperparameters.add_argument(
-        '--hidden_size',
-        type=int,
-        default=600,
-        help='Size of hidden layers (per layer?)', # TODO: clarify wording
-    )
-
-    hyperparameters.add_argument(
-        '--num_layers',
-        type=int,
-        default=4,
-        help='Number of (hidden?) layers', # TODO: clarify wording
-    )
-
-    hyperparameters.add_argument(
-        '--dropout',
-        type=float,
-        default=.3,
-        help='Fraction of units to drop (per epoch?)', # TODO: clarify wording
-    )
-
-    hyperparameters.add_argument(
-        '--embedding_size',
-        type=int,
-        default=40,
-        help='Number of dimensions for embedding output',
-    )
-
-    hyperparameters.add_argument(
         '--clustering_type',
         default='kmeans',
         choices=['kmeans', 'gmm'], # TODO: what choices here?
@@ -334,12 +306,6 @@ def hyperparameters(parser: argparse.ArgumentParser):
         default='psa',
         choices=['psa', 'msa', 'ibm'],
         help='Mask approximation method', # TODO: clarify wording
-    )
-
-    hyperparameters.add_argument(
-        '--embedding_activation',
-        default='none',
-        help='?', # TODO: clarify wording
     )
 
     hyperparameters.add_argument(

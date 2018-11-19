@@ -1,0 +1,33 @@
+{
+    "num_frequencies": 256,
+    "num_mels": -1,
+    "sample_rate": 44100,
+    "hidden_size": 300,
+    "bidirectional": true,
+    "num_layers": 4,
+    "embedding_size": 20,
+    "dropout": 0.3,
+    "activations": {},
+    "projection_trainable": false,
+    "rnn_type": "lstm"
+}
+
+defaults = {
+    'embedding_size': 20,
+    'embedding_activation': ['sigmoid', 'unitnorm'],
+    'projection_trainable': False,
+}
+
+defaults = {
+    'num_sources': 4,
+    'mask_activation': ['softmax'],
+    'projection_trainable': False,
+}
+
+defaults = {
+    'num_sources': 2,
+    'embedding_size': 20,
+    'embedding_activation': ['sigmoid', 'unitnorm'],
+    'mask_activation': ['softmax'],
+    'trainable': False,
+}
