@@ -52,7 +52,7 @@
   },
   "rnn_type": {
     "type": "str.lower",
-    "defaullt": "lstm",
+    "default": "lstm",
     "choices": ["lstm", "gru"],
     "help": "Type of RNN (recursive neural net)"
   }
