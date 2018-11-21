@@ -1,58 +1,47 @@
 {
   "num_frequencies": {
     "type": "int",
-    "default": 256,
     "help":"Specify the number of frequency steps for input representations"
   },
   "num_mels": {
     "type": "int",
-    "default": -1,
     "help": "Specifies the number of mel frequency steps for projection (-1 avoids projection but still performs clamping)"
   },
   "sample_rate": {
     "type": "int",
-    "default": 44100,
     "help": "Audio sample rate in Hz"
   },
   "bidirectional": {
     "type": "bool",
-    "default": false,
     "help": "Whether or not the given architecture is bidirectional"
   },
   "hidden_size": {
     "type": "int",
-    "default": 600,
     "help": "Size of hidden layers (per layer?)"
   },
   "num_layers": {
     "type": "int",
-    "default": 4,
     "help": "Number of (hidden?) layers"
   },
   "num_sources": {
     "type": "int",
-    "default": 4,
     "help": "Number of sources to separate"
   },
   "dropout": {
     "type": "float",
-    "default": 0.3,
     "help": "Fraction of units to drop (per epoch?)"
   },
   "mask_activation": {
-    "default": ["softmax"],
     "nargs": "+",
     "choices": ["tanh", "relu", "sigmoid", "softmax", "none", "unitnorm"],
     "help": "Activation function for mask"
   },
   "projection_trainable": {
     "type": "bool",
-    "default": false,
     "help": "Project to a learned input representation (learned from initial Mel projection)"
   },
   "rnn_type": {
     "type": "str.lower",
-    "default": "lstm",
     "choices": ["lstm", "gru"],
     "help": "Type of RNN (recursive neural net)"
   }
