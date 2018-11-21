@@ -1,23 +1,11 @@
 def build_mi_config(options=None):
-    defaults = {
-        'num_frequencies': 256,
-        'num_mels': -1,
-        'sample_rate': 44100,
-        'hidden_size': 300,
-        'bidirectional': True,
-        'num_layers': 4,
-        'num_sources': 4,
-        'dropout': .3,
-        'mask_activation': ['softmax'],
-        'projection_trainable': False,
-        'rnn_type': 'lstm'
-    }
+    options['num_features'] = (
+        options['num_mels']
+        if options['num_mels'] > 0
+        else options['num_frequencies']
+    )
 
-    options = {**defaults, **(options if options else {})}
-    options['num_features'] = (options['num_mels'] if options['num_mels'] > 0
-                               else options['num_frequencies'])
-
-    config = {
+    return {
         'modules': {
             'log_spectrogram': {
                 'input_shape': (-1, -1, options['num_frequencies'])
@@ -34,7 +22,8 @@ def build_mi_config(options=None):
                     'direction': 'forward',
                     'trainable': options['projection_trainable'],
                     'clamp': False
-                }},
+                }
+            },
             'recurrent_stack': {
                 'class': 'RecurrentStack',
                 'args': {
@@ -44,16 +33,21 @@ def build_mi_config(options=None):
                     'bidirectional': options['bidirectional'],
                     'dropout': options['dropout'],
                     'rnn_type': options['rnn_type']
-                }},
+                }
+            },
             'masks': {
                 'class': 'Embedding',
                 'args': {
                     'num_features': options['num_features'],
-                    'hidden_size': (2 * options['hidden_size'] if options['bidirectional']
-                                    else options['hidden_size']),
+                    'hidden_size': (
+                        2 * options['hidden_size']
+                        if options['bidirectional']
+                        else options['hidden_size']
+                    ),
                     'embedding_size': options['num_sources'],
                     'activation': options['mask_activation']
-                }},
+                }
+            },
             'inv_projection': {
                 'class': 'MelProjection',
                 'args': {
@@ -62,11 +56,12 @@ def build_mi_config(options=None):
                     'num_mels': options['num_mels'],
                     'direction': 'backward',
                     'clamp': True
-                }},
+                }
+            },
             'estimates': {
                 'class': 'Mask',
-                'args': {
-                }}
+                'args': {}
+            }
         },
         'connections': [
             ('mel_projection', ['log_spectrogram']),
@@ -77,4 +72,3 @@ def build_mi_config(options=None):
         ],
         'output': ['estimates']
     }
-    return config
