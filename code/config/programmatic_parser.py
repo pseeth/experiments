@@ -26,30 +26,37 @@ def preprocess_metadata(option_name: str, metadata):
     return {
         'flag': f"{'' if is_positional else '--'}{option_name}",
         **{
-            process_single_key(key, val)
+            key: process_single_key(key, val)
             for key, val in metadata.items()
             if key not in ['positional']
         }
     }
 
-def build_parser():
-    with open('./defaults/models/dpcl_recurrent.json') as f:
-        dpcl_options = json.load(f)
-
-    with open('./defaults/models/metadata/dpcl_recurrent.json') as f:
-        dpcl_metadata = json.load(f)
+def add_arguments(subparser, defaults_path: str, metadata_path: str):
+    with open(defaults_path) as defaults_f, open(metadata_path) as metadata_f:
+        all_options = json.load(defaults_f)
+        all_metadata = json.load(metadata_f)
 
     # could also just raise warning here
     # then iterate on intersection of keys later
-    if set(dpcl_options) != set(dpcl_metadata):
-        raise Exception("Metadata does not match options")
+    if set(all_options) != set(all_metadata):
+        raise Exception("Metadata keys do not match options keys")
 
-    metadata_dict = {
+    processed_metadata = {
         option_name: preprocess_metadata(option_name, metadata)
         for option_name, metadata
-        in dpcl_metadata.items()
+        in all_metadata.items()
     }
 
+    for option, default in all_options.items():
+        # guaranteed to succeed due to set comparison above
+        metadata = processed_metadata[option]
+        subparser.add_argument(
+            metadata.pop('flag'),
+            **metadata # note that `name` key has been popped by this point
+        )
+
+def build_parser():
     parser = argparse.ArgumentParser(
         description=(
             'TUSSL: A framework for training deep net based audio'
@@ -58,13 +65,17 @@ def build_parser():
         # TODO: also use `MetavarTypeHelpFormatter` somehow?
         formatter_class = argparse.ArgumentDefaultsHelpFormatter
     )
-    for option_name, default in dpcl_options.items():
-        # guaranteed to succeed due to set comparison above
-        metadata = metadata_dict[option_name]
-        parser.add_argument(
-            metadata.pop('flag'),
-            **metadata # note that `name` key has been popped by this point
-        )
+
+    subparsers  = parser.add_subparsers()
+
+    with open("./subparsers.json") as subparsers_file:
+        for subparser_name, metadata in json.load(subparsers_file).items():
+            subparser = subparsers.add_parser(subparser_name)
+            add_arguments(
+                subparser,
+                metadata['defaults_path'],
+                metadata['metadata_path'],
+            )
 
     parser.parse_args()
 

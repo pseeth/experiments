@@ -1,0 +1,17 @@
+{
+  "dpcl_recurrent": {
+    "help": "Construct a recurrent Deep Clustering model",
+    "defaults_path": "./defaults/models/dpcl_recurrent.json",
+    "metadata_path": "./defaults/models/metadata/dpcl_recurrent.json"
+  },
+  "mask_inference_recurrent": {
+    "help": "Construct a recurrent Mask Inference model",
+    "defaults_path": "./defaults/models/mask_inference_recurrent.json",
+    "metadata_path": "./defaults/models/metadata/mask_inference_recurrent.json"
+  },
+  "chimera_recurrent": {
+    "help": "Construct a recurrent Chimera model",
+    "defaults_path": "./defaults/models/chimera_recurrent.json",
+    "metadata_path": "./defaults/models/metadata/chimera_recurrent.json"
+  }
+}
