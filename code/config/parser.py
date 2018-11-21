@@ -340,6 +340,14 @@ def toy_parser():
 
     )
 
+    subparsers = parser.add_subparsers(help='commands')
+    subparsers_nested = subparsers.add_subparsers(help='nested')
+
+    model = subparsers.add_parser('model')
+    model.add_argument('--test')
+    nested = subparsers_nested.add_parser('train')
+    nested.add_argument('--nested-test')
+
     folders(parser)
     hyperparameters(parser)
     representation(parser)
