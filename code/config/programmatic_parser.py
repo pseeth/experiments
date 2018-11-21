@@ -1,10 +1,9 @@
 import argparse
 import json
-from pprint import pprint
 
 # TODO: add typing
 
-def preprocess_metadata(option_name: str, metadata):
+def preprocess_metadata(option_name: str, metadata, default=None):
     """Massage data for splatting into `add_argument()`
 
     Currently performs two manipulations
@@ -23,8 +22,13 @@ def preprocess_metadata(option_name: str, metadata):
         return eval(key) if key == 'type' else val
 
     is_positional = option_name in metadata and metadata[option_name]
-    return {
+    manual = {
         'flag': f"{'' if is_positional else '--'}{option_name}",
+    }
+    if default: manual['default'] = default
+
+    return {
+        **manual,
         **{
             key: process_single_key(key, val)
             for key, val in metadata.items()
@@ -34,21 +38,25 @@ def preprocess_metadata(option_name: str, metadata):
 
 def add_arguments(subparser, defaults_path: str, metadata_path: str):
     with open(defaults_path) as defaults_f, open(metadata_path) as metadata_f:
-        all_options = json.load(defaults_f)
+        all_defaults = json.load(defaults_f)
         all_metadata = json.load(metadata_f)
 
     # could also just raise warning here
     # then iterate on intersection of keys later
-    if set(all_options) != set(all_metadata):
+    if set(all_defaults) != set(all_metadata):
         raise Exception("Metadata keys do not match options keys")
 
     processed_metadata = {
-        option_name: preprocess_metadata(option_name, metadata)
+        option_name: preprocess_metadata(
+            option_name,
+            metadata,
+            all_defaults[option_name],
+        )
         for option_name, metadata
         in all_metadata.items()
     }
 
-    for option, default in all_options.items():
+    for option, default in all_defaults.items():
         # guaranteed to succeed due to set comparison above
         metadata = processed_metadata[option]
         subparser.add_argument(
@@ -70,7 +78,10 @@ def build_parser():
 
     with open("./subparsers.json") as subparsers_file:
         for subparser_name, metadata in json.load(subparsers_file).items():
-            subparser = subparsers.add_parser(subparser_name)
+            subparser = subparsers.add_parser(
+                subparser_name,
+                formatter_class = argparse.ArgumentDefaultsHelpFormatter
+            )
             add_arguments(
                 subparser,
                 metadata['defaults_path'],
