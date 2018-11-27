@@ -97,7 +97,7 @@ def build_parser():
         formatter_class = argparse.ArgumentDefaultsHelpFormatter
     )
 
-    subparsers  = parser.add_subparsers()
+    subparsers = parser.add_subparsers(dest='subparser')
 
     subparsers_json = load_from_json("./config/subparsers.json")
     for subparser_name, metadata in subparsers_json.items():
@@ -112,7 +112,7 @@ def build_parser():
             metadata['metadata_path'],
         )
 
-    parser.parse_args()
+    return parser.parse_args()
 
 if __name__ == "__main__":
     build_parser()

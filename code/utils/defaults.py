@@ -6,4 +6,4 @@ def load_from_json(path: str):
 
 def save_to_json(path: str, data):
     with open(path, 'w') as f:
-        json.dump(data, f, indent=4)
+        json.dump(data, f, indent=2)
