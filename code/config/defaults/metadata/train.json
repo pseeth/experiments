@@ -48,27 +48,9 @@
     "choices": ["adam", "rmsprop", "sgd"],
     "help": "Optimizer for gradient descent"
   },
-  "clustering_type": {
-    "default": "kmeans",
-    "choices": ["kmeans", "gmm"],
-    "help": "Type of clustering to perform on embeddings"
-	},
-  "unfold_iterations": {
-    "action": "store_true",
-    "help": "?"
-	},
-  "activation_type": {
-    "type": "str.lower",
-    "choices": ["sigmoid", "relu"],
-    "help": "?"
-	},
   "curriculum_learning": {
     "action": "store_true",
     "help": "Whether or not to perform curriculum learning"
-	},
-  "num_clustering_iterations": {
-    "type": "int",
-    "help": "Number of iterations of clustering to perform"
 	},
   "initial_length": {
     "type": "float",
