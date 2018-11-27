@@ -19,9 +19,13 @@ def preprocess_metadata(option_name: str, metadata, default=None):
         massaged metadata
     """
     def process_single_key(key, val):
-        return eval(key) if key == 'type' else val
+        if key == 'type':
+            return eval(val)
+        elif key == 'metavar':
+            return tuple(val)
 
-    print(metadata)
+        return val
+
     is_positional = "is_positional" in metadata and metadata["is_positional"]
     manual = {
         'flag': f"{'' if is_positional else '--'}{option_name}",
