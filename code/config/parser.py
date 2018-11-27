@@ -2,7 +2,7 @@ import argparse
 
 # TODO: remove hack
 import sys
-sys.path.insert(0, "../utils")
+sys.path.insert(0, "./utils")
 from load import load_json
 # TODO: remove hack
 
@@ -99,7 +99,7 @@ def build_parser():
 
     subparsers  = parser.add_subparsers()
 
-    subparsers_json = load_json("./subparsers.json")
+    subparsers_json = load_json("./config/subparsers.json")
     for subparser_name, metadata in subparsers_json.items():
         # TODO: handle option aliases
         subparser = subparsers.add_parser(
