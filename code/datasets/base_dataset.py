@@ -28,6 +28,7 @@ class BaseDataset(Dataset):
             'cache': True,
             'fraction_of_dataset': 1.0,
             'weight_type': 'magnitude',
+            'weight_threshold': -40,
             'num_channels': 1,
             'group_sources': [],
             'source_labels': [],
@@ -186,7 +187,7 @@ class BaseDataset(Dataset):
         if ('magnitude' in weight_type):
             weights *= self.magnitude_weights(data_dict['magnitude_spectrogram'])
         if ('threshold' in weight_type):
-            weights *= self.threshold_weights(data_dict['log_spectrogram'])
+            weights *= self.threshold_weights(data_dict['log_spectrogram'], self.options['weight_threshold'])
         return weights
 
     @staticmethod
