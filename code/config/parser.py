@@ -34,93 +34,12 @@ def audio_processing(parser: argparse.ArgumentParser):
         description='Parameters for audio pre-processing',
     )
 
-    audio_processing.add_argument(
-        '--n_fft',
-        type=int,
-        default=256,
-        # TODO: clarify wording
-        help='Number of samples per fft (Fast Fourier Transform)',
-    )
-
-    audio_processing.add_argument(
-        '--hop_length',
-        type=int,
-        default=64,
-        # TODO: clarify wording
-        help='Number of samples to shift fft (Fast Fourier Transofrm) window',
-    )
-
     # TODO: mel projection size? is this in the right arg group?
     audio_processing.add_argument(
         '--projection_size',
         type=int,
         default=0,
         help='?', # TODO: clarify wording
-    )
-
-    audio_processing.add_argument(
-        '--db_threshold',
-        type=float,
-        default=-80,
-        help=(
-            'Decibel (db) threshold to retain TF (time-frequency) bins. For'
-            ' example, if given `10`, all bins with lower magnitudes will be'
-            ' ignored.'
-        ),
-    )
-
-def dataset(parser: argparse.ArgumentParser):
-    dataset = parser.add_argument_group(
-        'dataset',
-        description='Parameters manipulating the given dataset',
-    )
-
-    dataset.add_argument(
-        '--dataset_type',
-        type=str.lower,
-        default=['scaper'],
-        choices=['scaper', 'wsj'],
-        help=(
-            'Labels identifying sources in your dataset. List only the labels'
-            ' for sources you want to separate'
-        ),
-    )
-
-    dataset.add_argument(
-        '--source_labels',
-        type=str.lower,
-        nargs='+',
-        help=(
-            'Labels identifying sources in your dataset. List only the labels'
-            ' for sources you want to separate'
-        ),
-    )
-
-    dataset.add_argument(
-        '--sample_strategy',
-        default=['sequential'],
-        type=str.lower,
-        choices=['sequential', 'random'],
-        help='Strategy for sampling training examples',
-    )
-
-    dataset.add_argument(
-        '--group_sources',
-        type=str.lower,
-        nargs='+',
-        action='append',
-        help=(
-            'Specify multiple source labels to treat them as one source. This'
-            ' option requires specification of the `--source_labels` option'
-            ' and any grouped sources *must* be listed in the values passed'
-            ' to `--source_labels`. Multiple groupings are allowed, each with'
-            ' separate usages of this flag. For example, if you have source '
-            ' labels - bass, guitar, drums, violin, and vocals - and you would'
-            ' like to treat vocals as one source, bass and guitar combined as'
-            ' another, and drums and violin as a third:'
-            ' `... --source_labels vocals bass guitar violin drums'
-            ' --group_sources bass guitar --group_sources violin drums`.'
-        ),
     )
 
 def representation(parser: argparse.ArgumentParser):

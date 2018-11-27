@@ -13,5 +13,10 @@
     "help": "Construct a recurrent Chimera model",
     "defaults_path": "./defaults/models/chimera_recurrent.json",
     "metadata_path": "./defaults/models/metadata/chimera_recurrent.json"
+  },
+  "dataset": {
+    "help": "Parameters to specify and manipulate training dataset",
+    "defaults_path": "./defaults/dataset.json",
+    "metadata_path": "./defaults/metadata/dataset.json"
   }
 }
