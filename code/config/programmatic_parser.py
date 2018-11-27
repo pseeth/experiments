@@ -48,7 +48,14 @@ def add_arguments(subparser, defaults_path: str, metadata_path: str):
 
     # could also just raise warning here
     # then iterate on intersection of keys later
-    if set(all_defaults) != set(all_metadata):
+    no_positional_args = [
+        key
+        for key, val in all_metadata.items()
+        if "is_positional" not in val or val["is_positional"] == False
+    ]
+    if set(all_defaults) != set(no_positional_args):
+        print(f'In defaults, not no positional: {set(all_defaults) - set(no_positional_args)}')
+        print(f'In no positional, not defaults: {set(no_positional_args) - set(all_defaults)}')
         raise Exception("Metadata keys do not match options keys")
 
     processed_metadata = {
