@@ -1,254 +1,93 @@
 import argparse
 
-def folders(parser: argparse.ArgumentParser):
-    folders = parser.add_argument_group(
-        'folders',
-        description='Folder paths for training, validation & output',
-    )
+# TODO: remove hack
+import sys
+sys.path.insert(0, "../utils")
+from load import load_json
+# TODO: remove hack
 
-    folders.add_argument(
-        'training_folder',
-        nargs='*',
-        help='Path(s) to folder(s) containing training data',
-    )
+# TODO: add typing
 
-    folders.add_argument(
-        '--validation_folder',
-        type=str.lower,
-        help='Path to folder containing validation data',
-    )
+def preprocess_metadata(option_name: str, metadata, default=None):
+    """Massage data for splatting into `add_argument()`
 
-    folders.add_argument(
-        '--output_folder',
-        type=str.lower,
-        help=(
-            'Path to folder to write output to (this includes logs &'
-            ' checkpoints)'
-        ),
-    )
+    Currently performs two manipulations
+        1. add `name` keyed to `(--)<option_name>`
+        2. make type fields functions (unsafely using `eval()`, should fix).
+            possible alternative - dictionary of functions keyed by 'type'
 
-def audio_processing(parser: argparse.ArgumentParser):
-    audio_processing = parser.add_argument_group(
-        'audio processing',
-        # TODO: clarify wording
-        description='Parameters for audio pre-processing',
-    )
+    Args:
+        option_name - name of option
+        metadata - dictionary of metadata related to option name
 
-    # TODO: mel projection size? is this in the right arg group?
-    audio_processing.add_argument(
-        '--projection_size',
-        type=int,
-        default=0,
-        help='?', # TODO: clarify wording
-    )
+    Returns:
+        massaged metadata
+    """
+    def process_single_key(key, val):
+        if key == 'type':
+            return eval(val)
+        elif key == 'metavar':
+            return tuple(val)
 
-def representation(parser: argparse.ArgumentParser):
-    representation = parser.add_argument_group(
-        'representation',
-        description='Parameters specific to chosen representations',
-    )
+        return val
 
-    # TODO: separate gaussian/covariance options to another argument group?
+    is_positional = "is_positional" in metadata and metadata["is_positional"]
+    manual = {
+        'flag': f"{'' if is_positional else '--'}{option_name}",
+    }
+    if default: manual['default'] = default
 
-    representation.add_argument(
-        '--num_gaussians_per_source',
-        type=int,
-        default=1,
-        # TODO: clarify wording
-        help='Number of gaussians to use to model each source',
-    )
+    return {
+        **manual,
+        **{
+            key: process_single_key(key, val)
+            for key, val in metadata.items()
+            if key not in ['is_positional']
+        }
+    }
 
-    representation.add_argument(
-        '--covariance_type',
-        default='diag',
-        choices=['spherical', 'diag', 'tied_spherical', 'tied_diag'],
-        help='Minimum covariance', # TODO: clarify wording
-    )
+def add_arguments(subparser, defaults_path: str, metadata_path: str):
+    all_metadata = load_json(metadata_path)
+    all_defaults = load_json(defaults_path)
 
-    representation.add_argument(
-        '--covariance_min',
-        type=float,
-        default=.5,
-        help='Minimum covariance', # TODO: clarify wording
-    )
-
-    representation.add_argument(
-        '--fix_covariance',
-        action='store_true',
-        help='Whether or not to fix covariance', # TODO: clarify wording
-    )
-
-def hyperparameters(parser: argparse.ArgumentParser):
-    hyperparameters = parser.add_argument_group(
-        'hyperparameters',
-        description='Parameters to dictate training behavior',
-    )
-
-    hyperparameters.add_argument(
-        '--num_epochs',
-        type=int,
-        default=100,
-        help=(
-            'Number of training epochs. One epoch means one run through all'
-            ' given training data'
-        ),
-    )
-    hyperparameters.add_argument(
-        '--learning_rate', '-lr',
-        type=float,
-        default=1e-3,
-        help='Weighting of backprop delta' # TODO: clarify wording
-    )
-    hyperparameters.add_argument(
-        '--learning_rate_decay',
-        type=float,
-        default=.5,
-        help=(
-            # TODO: clarify wording
-            'Rate at which to decay learning rate. A learning rate of .5'
-            ' means the learning rate is halved every  <patience=5> epochs'
-            ' that the change in the loss function is below some epsilon'
+    # could also just raise warning here
+    # then iterate on intersection of keys later
+    no_positional_args = [
+        key
+        for key, val in all_metadata.items()
+        if "is_positional" not in val or val["is_positional"] == False
+    ]
+    if set(all_defaults) != set(no_positional_args):
+        print(
+            'In defaults, not no positional:'
+            + f' {set(all_defaults) - set(no_positional_args)}'
         )
-    )
-    hyperparameters.add_argument(
-        '--patience',
-        type=int,
-        default=5,
-        # TODO: clarify wording
-        help=(
-            'Number of epochs of minimal (within some epsilon) change in'
-            ' loss function required before decaying learning rate'
+        print(
+            'In no positional, not defaults:'
+            + f' {set(no_positional_args) - set(all_defaults)}'
         )
-    )
-    hyperparameters.add_argument(
-        '--batch_size',
-        type=int,
-        default=5,
-        # TODO: clarify wording
-        help='Number of training samples per batch'
-    )
-    hyperparameters.add_argument(
-        '--num_workers',
-        type=int,
-        default=5,
-        help='?', # TODO: clarify wording
-    )
+        raise Exception("Metadata keys do not match options keys")
 
-    # TODO: make sure to lowercase given function and confirm it's valid,
-    # validate that weight is a float, and validate target (limited set of
-    # choices?)
-    hyperparameters.add_argument(
-        '--loss_function_classes_targets_weights', '-lfctw',
-        type=str.lower, # lowercase choices (ignores numbers)
-        nargs=3,
-        action='append',
-        metavar=('FUNCTION', 'TARGET', 'WEIGHT'),
-        # TODO: clarify wording
-        help=(
-            'Triple of loss function, target model output on which to compute'
-            " loss function and weight. `FUNCTION` may be any of the following:"
-            " ['L1, 'DPCL', 'MSE', 'KL']. Multiple loss function triples may be"
-            ' specified, each triple to its own `-lfctw` flag. E.g. to specify'
-            ' two different loss functions:'
-            '`... -lfctw L1 masks .4 -lfctw DPCL embeddings .6`'
-        ),
-    )
+    processed_metadata = {
+        option_name: preprocess_metadata(
+            option_name,
+            metadata,
+            all_defaults.get(option_name, None),
+        )
+        for option_name, metadata
+        in all_metadata.items()
+    }
 
-    hyperparameters.add_argument(
-        '--optimizer',
-        type=str.lower, # allow specification of choices with any casing
-        default='adam',
-        choices=['adam', 'rmsprop', 'sgd'],
-        help='Optimizer for gradient descent', # TODO: clarify wording
-    )
+    for option, metadata in processed_metadata.items():
+        if option in all_defaults:
+            metadata["default"] = all_defaults[option]
 
-    hyperparameters.add_argument(
-        '--clustering_type',
-        default='kmeans',
-        choices=['kmeans', 'gmm'], # TODO: what choices here?
-        help='Type of clustering to perform on embeddings',
-    )
+        subparser.add_argument(
+            metadata.pop('flag'),
+            **metadata # note that `flag` key has been popped by this point
+        )
 
-    hyperparameters.add_argument(
-        '--unfold_iterations',
-        action='store_true',
-        help='?', # TODO: clarify wording
-    )
-
-    hyperparameters.add_argument(
-        '--activation_type',
-        type=str.lower,
-        default='sigmoid',
-        choices=['sigmoid', 'relu'], # TODO: what choices here?
-        help='?', # TODO: clarify wording
-    )
-
-    hyperparameters.add_argument(
-        '--curriculum_learning',
-        action='store_true',
-        # TODO: clarify wording
-        help='Whether or not to perform curriculum learning',
-    )
-
-    hyperparameters.add_argument(
-        '--weight_method',
-        type=str.lower,
-        default='magnitude',
-        choices=['magnitude'], # TODO: what choices here?
-        help=(
-            'Method by which to weight relative importance of accurately'
-            ' predicting each TF (time-frequency) bin. Given `magnitude`,'
-            ' training prioritizes accurately predicting louder bins.'
-        ),
-    )
-
-    hyperparameters.add_argument(
-        '--num_clustering_iterations',
-        type=int,
-        default=5,
-        # TODO: clarify wording
-        help='Number of iterations of clustering to perform',
-    )
-
-    hyperparameters.add_argument(
-        '--initial_length',
-        type=float,
-        default=1.0,
-        # TODO: clarify wording
-        help='Fraction of initial length to use (for curriculum learning)',
-    )
-
-    # TODO: better location for this?
-    hyperparameters.add_argument(
-        '--target_type',
-        type=str.lower,
-        default='psa',
-        choices=['psa', 'msa', 'ibm'],
-        help='Mask approximation method', # TODO: clarify wording
-    )
-
-    hyperparameters.add_argument(
-        '--weight_decay',
-        type=float,
-        default=0.0,
-        help='For L2 regularization', # TODO: clarify wording
-    )
-
-def miscellaneous(parser: argparse.ArgumentParser):
-    parser.add_argument(
-        '--generate_plots',
-        action='store_true',
-        # TODO: clarify wording
-        help='Whether or not to generate plots (of accuracy?)'
-    )
-
-    parser.add_argument(
-        '--create_cache',
-        action='store_true',
-        help='Whether or not to cache ?' # TODO: clarify wording
-    )
-
-def toy_parser():
+def build_parser():
     parser = argparse.ArgumentParser(
         description=(
             'TUSSL: A framework for training deep net based audio'
@@ -256,26 +95,24 @@ def toy_parser():
         ),
         # TODO: also use `MetavarTypeHelpFormatter` somehow?
         formatter_class = argparse.ArgumentDefaultsHelpFormatter
-
     )
 
-    subparsers = parser.add_subparsers(help='commands')
-    subparsers_nested = subparsers.add_subparsers(help='nested')
+    subparsers  = parser.add_subparsers()
 
-    model = subparsers.add_parser('model')
-    model.add_argument('--test')
-    nested = subparsers_nested.add_parser('train')
-    nested.add_argument('--nested-test')
+    subparsers_json = load_json("./subparsers.json")
+    for subparser_name, metadata in subparsers_json.items():
+        # TODO: handle option aliases
+        subparser = subparsers.add_parser(
+            subparser_name,
+            formatter_class = argparse.ArgumentDefaultsHelpFormatter
+        )
+        add_arguments(
+            subparser,
+            metadata['defaults_path'],
+            metadata['metadata_path'],
+        )
 
-    folders(parser)
-    hyperparameters(parser)
-    representation(parser)
-    audio_processing(parser)
-    dataset(parser)
+    parser.parse_args()
 
-    # TODO: post process parsed args to confirm valid loss_function triples
-    return parser.parse_args()
-
-
-if __name__ == '__main__':
-    print(toy_parser())
+if __name__ == "__main__":
+    build_parser()
