@@ -4,6 +4,7 @@ import librosa
 from scipy.io import wavfile
 import numpy as np
 import os
+import shutil
 
 class BaseDataset(Dataset):
     def __init__(self, folder, options=None):
@@ -39,6 +40,7 @@ class BaseDataset(Dataset):
 
         if self.options['cache']:
             self.cache_location = os.path.join(folder, 'cache', self.options['output_type'], self.options['weight_type'])
+            shutil.rmtree(self.cache_location, ignore_errors=True)
             os.makedirs(self.cache_location, exist_ok=True)
 
         if self.options['fraction_of_dataset'] < 1.0:
@@ -62,9 +64,10 @@ class BaseDataset(Dataset):
             output = self.construct_input_output(mix, sources)
             output['log_spectrogram'] = self.whiten(output['log_spectrogram'])
             output['labels'] = labels
-            self.write_to_cache(output, str(i))
+            output = self.get_target_length_and_transpose(output, self.options['length'])
+            self.write_to_cache(output, '%06d.pth' % i)
         else:
-            output = self.load_from_cache(str(i))
+            output = self.load_from_cache('%06d.pth' % i)
         return output
 
     def write_to_cache(self, data_dict, file_name):
@@ -114,14 +117,13 @@ class BaseDataset(Dataset):
             'assignments': assignments,
             'source_spectrograms': source_magnitudes,
         }
-
         output['weights'] = self.weight(output, self.options['weight_type'])
-
         return output
 
 
-    def get_target_length_and_transpose(self, data_list, target_length):
-        length = data_list[0].shape[1]
+    def get_target_length_and_transpose(self, data_dict, target_length):
+        length = data_dict['log_spectrogram'].shape[1]
+        targets = ['log_spectrogram', 'magnitude_spectrogram', 'assignments', 'source_spectrograms', 'weights']
         if target_length == 'full':
             target_length = length
         if length > target_length:
@@ -129,15 +131,16 @@ class BaseDataset(Dataset):
         else:
             offset = 0
 
-        for i, data in enumerate(data_list):
+        for i, target in enumerate(targets):
+            data = data_dict[target]
             pad_length = max(target_length - length, 0)
             pad_tuple = [(0, 0) for k in range(len(data.shape))]
             pad_tuple[1] = (0, pad_length)
-            data_list[i] = np.pad(data, pad_tuple, mode='constant')
-            data_list[i] = data_list[i][:, offset:offset + target_length, :self.options['num_channels']]
-            data_list[i] = np.swapaxes(data_list[i], 0, 1)
+            data_dict[target] = np.pad(data, pad_tuple, mode='constant')
+            data_dict[target] = data_dict[target][:, offset:offset + target_length, :self.options['num_channels']]
+            data_dict[target] = np.swapaxes(data_dict[target], 0, 1)
 
-        return data_list
+        return data_dict
 
     @staticmethod
     def transform(data, n_fft, hop_length):
