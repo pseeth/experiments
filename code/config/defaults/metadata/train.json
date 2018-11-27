@@ -1,15 +1,81 @@
 {
   "training_folder": {
+    "is_positional": true,
     "nargs": "*",
-    "help": "Path(s) to folder(s) contianing training data"
+    "help": "Path(s) to folder(s) contianing training data."
   },
   "validation_folder": {
-    "nargs": "*",
-    "type"="str.lower",
-    "help": "Path to folder containing validation data"
+    "is_positional": true,
+    "help": "Path to folder containing validation data."
   },
-  "validation_folder": {
-    "type"="str.lower",
-    "help": "Path to folder to write output to (this includes logs &  checkpoints)"
-  }
+  "output_folder": {
+    "is_positional": true,
+    "help": "Path to folder to write output to (this includes logs &  checkpoints)."
+  },
+  "num_epochs": {
+    "type": "int",
+    "help": "Number of training epochs. One epoch means one run through all given training data."
+  },
+  "learning_rate": {
+    "type": "float",
+    "help": "Weighting of backprop delta."
+  },
+  "learning_rate_decay": {
+    "type": "float",
+    "help": "Rate at which to decay learning rate. A learning rate of 0.5 means the learning rate is halved every  <patience=5> epochs that the change in the loss function is below some epsilon"
+  },
+  "patience": {
+    "type": "int",
+    "help": "Number of epochs of minimal (within some epsilon) change in loss function required before decaying learning rate"
+  },
+  "batch_size": {
+    "type": "int",
+    "help": "Number of training samples per batch."
+  },
+  "num_workers": {
+    "type": "int",
+    "help": "? - clarify wording"
+  },
+  "loss_function_classes_targets_weights": {
+    "type": "str.lower",
+    "nargs": 3,
+    "action": "append",
+    "metavar": ["FUNCTION", "TARGET", "WEIGHT"],
+    "help": "Triple of loss function, target model output on which to compute loss function and weight. `FUNCTION` may be any of the following: ['L1', 'DPCL', 'MSE', 'KL']. Multiple loss function triples may be specified, each triple to its own `-lfctw` flag. E.g. to specify two different loss functions: `... -lfctw L1 masks .4 -lfctw DPCL embeddings .6`"
+  },
+  "optimizer": {
+    "type": "str.lower",
+    "choices": ["adam", "rmsprop", "sgd"],
+    "help": "Optimizer for gradient descent"
+  },
+  "clustering_type": {
+    "default": "kmeans",
+    "choices": ["kmeans", "gmm"],
+    "help": "Type of clustering to perform on embeddings"
+	},
+  "unfold_iterations": {
+    "action": "store_true",
+    "help": "?"
+	},
+  "activation_type": {
+    "type": "str.lower",
+    "choices": ["sigmoid", "relu"],
+    "help": "?"
+	},
+  "curriculum_learning": {
+    "action": "store_true",
+    "help": "Whether or not to perform curriculum learning"
+	},
+  "num_clustering_iterations": {
+    "type": "int",
+    "help": "Number of iterations of clustering to perform"
+	},
+  "initial_length": {
+    "type": "float",
+    "help": "Fraction of initial length to use (for curriculum learning)"
+	},
+  "weight_decay": {
+    "type": "float",
+    "help": "For L2 regularization"
+	}
 }

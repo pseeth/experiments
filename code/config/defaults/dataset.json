@@ -1,5 +1,4 @@
 {
-  "dataset_type": "wsj",
   "n_fft": 512,
   "hop_length": 128,
   "length": 400,

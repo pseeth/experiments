@@ -19,9 +19,13 @@ def preprocess_metadata(option_name: str, metadata, default=None):
         massaged metadata
     """
     def process_single_key(key, val):
-        return eval(key) if key == 'type' else val
+        if key == 'type':
+            return eval(val)
+        elif key == 'metavar':
+            return tuple(val)
 
-    print(metadata)
+        return val
+
     is_positional = "is_positional" in metadata and metadata["is_positional"]
     manual = {
         'flag': f"{'' if is_positional else '--'}{option_name}",
@@ -44,25 +48,33 @@ def add_arguments(subparser, defaults_path: str, metadata_path: str):
 
     # could also just raise warning here
     # then iterate on intersection of keys later
-    if set(all_defaults) != set(all_metadata):
+    no_positional_args = [
+        key
+        for key, val in all_metadata.items()
+        if "is_positional" not in val or val["is_positional"] == False
+    ]
+    if set(all_defaults) != set(no_positional_args):
+        print(f'In defaults, not no positional: {set(all_defaults) - set(no_positional_args)}')
+        print(f'In no positional, not defaults: {set(no_positional_args) - set(all_defaults)}')
         raise Exception("Metadata keys do not match options keys")
 
     processed_metadata = {
         option_name: preprocess_metadata(
             option_name,
             metadata,
-            all_defaults[option_name],
+            all_defaults.get(option_name, None),
         )
         for option_name, metadata
         in all_metadata.items()
     }
 
-    for option, default in all_defaults.items():
-        # guaranteed to succeed due to set comparison above
-        metadata = processed_metadata[option]
+    for option, metadata in processed_metadata.items():
+        if option in all_defaults:
+            metadata["default"] = all_defaults[option]
+
         subparser.add_argument(
             metadata.pop('flag'),
-            **metadata # note that `name` key has been popped by this point
+            **metadata # note that `flag` key has been popped by this point
         )
 
 def build_parser():
@@ -79,6 +91,7 @@ def build_parser():
 
     with open("./subparsers.json") as subparsers_file:
         for subparser_name, metadata in json.load(subparsers_file).items():
+            # TODO: handle option aliases
             subparser = subparsers.add_parser(
                 subparser_name,
                 formatter_class = argparse.ArgumentDefaultsHelpFormatter
