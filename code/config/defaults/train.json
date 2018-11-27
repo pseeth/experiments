@@ -5,13 +5,9 @@
   "patience": 5,
   "batch_size": 5,
   "num_workers": 5,
-  "loss_function_classes_targets_weights": ["L1 masks .4"],
+  "loss_function_classes_targets_weights": [["dpcl", "embeddings", 1.0]],
   "optimizer": "adam",
-  "clustering_type": "kmeans",
-  "unfold_iterations": true,
-  "activation_type": "sigmoid",
   "curriculum_learning": true,
-  "num_clustering_iterations": 5,
-  "initial_length": 1.0,
+  "initial_length": 400,
   "weight_decay": 0.0
 }
