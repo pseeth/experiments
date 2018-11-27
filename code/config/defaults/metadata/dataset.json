@@ -23,7 +23,7 @@
     "help": "Type of output, either phase sensitive or mask sensitive approximation."
   },
   "cache": {
-    "type": "bool",
+    "action": "store_true",
     "help": "Whether or not to cache training data for faster training."
   },
   "fraction_of_dataset": {
@@ -34,7 +34,7 @@
     "type": "str.lower",
     "nargs": "+",
     "choices": ["magnitude", "threshold", "none"],
-    "help": "Method with which to weight each time-frequency (TF) bin. If multiple listed, weighting combined through multiplication."
+    "help": "Method by which to weight relative importance of accurately predicting each time-frequency (TF) bin. Given `magnitude`, training prioritizes accurately predicting louder bins. If mutiple listed, weighting combined through multiplication."
   },
   "weight_threshold": {
     "type": "float",

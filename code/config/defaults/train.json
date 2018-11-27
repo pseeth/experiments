@@ -1,2 +1,16 @@
 {
+  "num_epochs": 100,
+  "learning_rate": 0.001,
+  "learning_rate_decay": 0.5,
+  "patience": 5,
+  "num_workers": 5,
+  "loss_function_classes_targets_weights": ["L1 masks .4"],
+  "optimizer": "adam",
+  "clustering_type": "kmeans",
+  "unfold_iterations": true,
+  "activation_type": "sigmoid",
+  "curriculum_learning": true,
+  "num_clustering_iterations": 5,
+  "initial_length": 1.0,
+  "weight_decay": 0.0
 }
