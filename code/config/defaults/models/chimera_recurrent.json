@@ -1,7 +1,7 @@
 {
   "num_frequencies": 256,
   "num_mels": -1,
-  "sample_rate": 8000,
+  "sample_rate": 16000,
   "bidirectional": true,
   "hidden_size": 300,
   "num_layers": 4,
