@@ -21,7 +21,8 @@ def preprocess_metadata(option_name: str, metadata, default=None):
     def process_single_key(key, val):
         return eval(key) if key == 'type' else val
 
-    is_positional = option_name in metadata and metadata[option_name]
+    print(metadata)
+    is_positional = "is_positional" in metadata and metadata["is_positional"]
     manual = {
         'flag': f"{'' if is_positional else '--'}{option_name}",
     }
@@ -32,7 +33,7 @@ def preprocess_metadata(option_name: str, metadata, default=None):
         **{
             key: process_single_key(key, val)
             for key, val in metadata.items()
-            if key not in ['positional']
+            if key not in ['is_positional']
         }
     }
 
