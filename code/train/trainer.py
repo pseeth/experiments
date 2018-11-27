@@ -12,7 +12,7 @@ import networks
 # TODO: remove hack
 import sys
 sys.path.insert(0, "../utils")
-from load import load_json
+from defaults import load_from_json
 # TODO: remove hack
 
 class Samplers(Enum):
@@ -45,8 +45,10 @@ class Trainer():
                  loss_tuples,
                  options=None):
 
-        defaults = load_json('../config/defaults/train.json')
-        options = {**defaults, **(options if options else {})}
+        options = {
+            **load_from_json('../config/defaults/train.json'),
+            **(options if options else {})
+        }
 
         if type(model) is str:
             if '.json' in model:

@@ -3,7 +3,7 @@ import argparse
 # TODO: remove hack
 import sys
 sys.path.insert(0, "./utils")
-from load import load_json
+from defaults import load_from_json
 # TODO: remove hack
 
 # TODO: add typing
@@ -47,8 +47,8 @@ def preprocess_metadata(option_name: str, metadata, default=None):
     }
 
 def add_arguments(subparser, defaults_path: str, metadata_path: str):
-    all_metadata = load_json(metadata_path)
-    all_defaults = load_json(defaults_path)
+    all_metadata = load_from_json(metadata_path)
+    all_defaults = load_from_json(defaults_path)
 
     # could also just raise warning here
     # then iterate on intersection of keys later
@@ -99,7 +99,7 @@ def build_parser():
 
     subparsers  = parser.add_subparsers()
 
-    subparsers_json = load_json("./config/subparsers.json")
+    subparsers_json = load_from_json("./config/subparsers.json")
     for subparser_name, metadata in subparsers_json.items():
         # TODO: handle option aliases
         subparser = subparsers.add_parser(
