@@ -6,6 +6,12 @@ import numpy as np
 import os
 import shutil
 
+# TODO: remove hack
+import sys
+sys.path.insert(0, "../utils")
+from load import load_json
+# TODO: remove hack
+
 class BaseDataset(Dataset):
     def __init__(self, folder, options=None):
         """This base class implements a variety of methods for loading source separation datasets such as WSJ0-[2,3]mix and datasets made with
@@ -19,22 +25,7 @@ class BaseDataset(Dataset):
             description.
         """
 
-        defaults = {
-            'n_fft': 512,
-            'hop_length': 128,
-            'length': 400,
-            'sample_rate': None,
-            'output_type': 'psa',
-            'cache': True,
-            'fraction_of_dataset': 1.0,
-            'weight_type': 'magnitude',
-            'weight_threshold': -40,
-            'num_channels': 1,
-            'group_sources': [],
-            'source_labels': [],
-            'ignore_sources': []
-        }
-
+        defaults = load_json('../config/defaults/dataset.json')
         self.options = {**defaults, **(options if options else {})}
         self.folder = folder
         self.files = self.get_files(self.folder)

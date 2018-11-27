@@ -9,6 +9,12 @@ from loss import DeepClusteringLoss, PermutationInvariantLoss
 import numpy as np
 import networks
 
+# TODO: remove hack
+import sys
+sys.path.insert(0, "../utils")
+from load import load_json
+# TODO: remove hack
+
 class Samplers(Enum):
     SEQUENTIAL = sampler.SequentialSampler
     RANDOM = sampler.RandomSampler
@@ -38,20 +44,8 @@ class Trainer():
                  model,
                  loss_tuples,
                  options=None):
-        defaults = {
-            'num_epochs': 100,
-            'learning_rate': 1e-3,
-            'learning_rate_decay': .5,
-            'patience': 5,
-            'batch_size': 40,
-            'num_workers': multiprocessing.cpu_count(),
-            'device': 'cuda' if torch.cuda.is_available() else 'cpu',
-            'sample_strategy': 'sequential',
-            'data_parallel': torch.cuda.device_count() > 1,
-            'weight_decay': 0.0,
-            'optimizer': 'adam'
-        }
 
+        defaults = load_json('../config/defaults/train.json')
         options = {**defaults, **(options if options else {})}
 
         if type(model) is str:
