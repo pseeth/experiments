@@ -9,7 +9,7 @@ class SeparationModel(nn.Module):
         SeparationModel takes a configuration file or dictionary that describes the model
         structure, which is some combination of MelProjection, Embedding, RecurrentStack,
         ConvolutionalStack, and other modules found in networks.modules. The configuration file
-        can be built using the helper functions in networks.helpers:
+        can be built using the helper functions in config.builders:
             - build_dpcl_config: Builds the original deep clustering network, mapping each
                 time-frequency point to an embedding of some size. Takes as input a
                 log_spectrogram.
@@ -90,10 +90,7 @@ class SeparationModel(nn.Module):
         output = {}
         for connection in self.connections:
             layer = self.layers[connection[0]]
-            input_data = []
-            for c in connection[1]:
-                _data = data[c] if c in self.input else output[c]
-                input_data.append(_data)
+            input_data = [data[c] if c in self.input else output[c] for c in connection[1]]
             output[connection[0]] = layer(*input_data)
         output = {o: output[o] for o in self.output_keys}
         return output

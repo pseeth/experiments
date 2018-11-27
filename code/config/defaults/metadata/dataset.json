@@ -3,7 +3,7 @@
     "is_positional": true,
     "type": "str.lower",
     "choices": ["scaper", "wsj"],
-    "help": "Name of dataset to use."
+    "help": "Type of dataset to use."
   },
   "n_fft": {
     "type": "int",
@@ -53,7 +53,7 @@
     "type": "str.lower",
     "nargs": "+",
     "action": "append",
-    "help": "Specify multiple source labels to treat them as one source. This  option requires specification of the `--source_labels` option and any grouped sources *must* be listed in the values passed to `--source_labels`. Multiple groupings are allowed, each with separate usages of this flag. For example, if you have source  labels - bass, guitar, drums, violin, and vocals - and you would like to treat vocals as one source, bass and guitar combined as another, and drums and violin as a third: `... --source_labels vocals bass guitar violin drums --group_sources bass guitar --group_sources violin drums`."
+    "help": "Specify multiple source labels to treat them as one source. This option requires specification of the `--source_labels` option and any grouped sources *must* be listed in the values passed to `--source_labels`. Multiple groupings are allowed, each with separate usages of this flag. For example, if you have source  labels - bass, guitar, drums, violin, and vocals - and you would like to treat vocals as one source, bass and guitar combined as another, and drums and violin as a third: `... --source_labels vocals bass guitar violin drums --group_sources bass guitar --group_sources violin drums`."
   },
   "source_labels": {
     "type": "str.lower",
