@@ -36,9 +36,10 @@ class BaseDataset(Dataset):
         self.options = {**defaults, **(options if options else {})}
         self.folder = folder
         self.files = self.get_files(self.folder)
+
         if self.options['cache']:
             self.cache_location = os.path.join(folder, 'cache', self.options['output_type'], self.options['weight_type'])
-            os.makedirs(self.cache_location)
+            os.makedirs(self.cache_location, exist_ok=True)
 
         if self.options['fraction_of_dataset'] < 1.0:
             num_files = int(len(self.files) * self.options['fraction_of_dataset'])
@@ -59,18 +60,19 @@ class BaseDataset(Dataset):
         if self.options['cache']:
             mix, sources, labels = self.load_audio_files(_file)
             output = self.construct_input_output(mix, sources)
+            output['log_spectrogram'] = self.whiten(output['log_spectrogram'])
             output['labels'] = labels
             self.write_to_cache(output, str(i))
         else:
             output = self.load_from_cache(str(i))
         return output
 
-    def write_to_cache(self, data_dict, wav_file):
-        with open(os.path.join(self.cache_location, wav_file), 'wb') as f:
+    def write_to_cache(self, data_dict, file_name):
+        with open(os.path.join(self.cache_location, file_name), 'wb') as f:
             pickle.dump(data_dict, f)
 
     def load_from_cache(self, wav_file):
-        with open(os.path.join(self.cache_location, wav_file), 'rb') as f:
+        with open(os.path.join(self.cache_location, file_name), 'rb') as f:
             data = pickle.load(f)
         return data
 

@@ -3,6 +3,7 @@ import librosa
 import jams
 import os
 import scaper
+import numpy as np
 
 class Scaper(BaseDataset):
     def __init__(self, folder, options=None):
@@ -24,7 +25,7 @@ class Scaper(BaseDataset):
         self.options['source_indices'] = {source_name: i for i, source_name in enumerate(self.options['source_labels'])}
 
     def get_files(self, folder):
-        files = [x for x in os.listdir(folder) if '.json' in x]
+        files = [os.path.join(folder, x) for x in os.listdir(folder) if '.json' in x]
         return files        
 
     def load_audio_files(self, file_name):
@@ -43,9 +44,9 @@ class Scaper(BaseDataset):
             if d['role'] == 'foreground':
                 source_path = d['saved_source_file']
                 source_path = os.path.join(self.folder, source_path.split('/')[-1])
-                sources.append(utils.load_audio(source_path)[0][0])
+                sources.append(self.load_audio(source_path)[0])
                 one_hot = np.zeros(len(classes))
-                one_hot[self.source_indices[d['label']]] = 1
+                one_hot[self.options['source_indices'][d['label']]] = 1
                 used_classes.append(d['label'])
                 one_hots.append(one_hot)
                 
@@ -55,21 +56,21 @@ class Scaper(BaseDataset):
                     one_hots.pop()
                     used_classes.pop()
                 else:
-                    keep_columns.append(self.source_indices[d['label']])
+                    keep_columns.append(self.options['source_indices'][d['label']])
 
-        if len(self.options['group_sources']) > 0:
+        if self.options['group_sources']:
             sources.append(sum(group))
             one_hot = np.zeros(len(classes))
-            one_hot[self.source_indices['group']] = 1
+            one_hot[self.options['source_indices']['group']] = 1
             used_classes.append('group')
             one_hots.append(one_hot)
-            keep_columns.append(self.source_indices['group'])
+            keep_columns.append(self.options['source_indices']['group'])
 
         source_order = [used_classes.index(c) for c in self.options['source_labels'] if c in used_classes]
         sources = [sources[i] for i in source_order]
         one_hots = [one_hots[i] for i in source_order]
 
-        if self.group_sources:
+        if self.options['group_sources']:
             one_hots = np.stack(one_hots)[:, sorted(keep_columns)]
         else:
             one_hots = np.stack(one_hots)
