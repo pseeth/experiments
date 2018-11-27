@@ -117,7 +117,7 @@ class BaseDataset(Dataset):
             'assignments': assignments,
             'source_spectrograms': source_magnitudes,
         }
-        output['weights'] = self.weight(output, self.options['weight_type'])
+        output['weights'] = self.get_weights(output, self.options['weight_type'])
         return output
 
 
@@ -181,12 +181,12 @@ class BaseDataset(Dataset):
                            for ch in range(data.shape[-1])], axis=0)
         return source
     
-    def weight(self, data_dict, weight_type):
+    def get_weights(self, data_dict, weight_type):
         weights = np.ones(data_dict['magnitude_spectrogram'].shape)
         if ('magnitude' in weight_type):
-            weights = self.magnitude_weights(data_dict['magnitude_spectrogram'])
+            weights *= self.magnitude_weights(data_dict['magnitude_spectrogram'])
         if ('threshold' in weight_type):
-            weights = self.threshold_weights(data_dict['log_spectrogram'])
+            weights *= self.threshold_weights(data_dict['log_spectrogram'])
         return weights
 
     @staticmethod
