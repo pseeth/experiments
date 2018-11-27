@@ -1,5 +1,10 @@
 import argparse
-import json
+
+# TODO: remove hack
+import sys
+sys.path.insert(0, "../utils")
+from load import load_json
+# TODO: remove hack
 
 # TODO: add typing
 
@@ -42,9 +47,8 @@ def preprocess_metadata(option_name: str, metadata, default=None):
     }
 
 def add_arguments(subparser, defaults_path: str, metadata_path: str):
-    with open(defaults_path) as defaults_f, open(metadata_path) as metadata_f:
-        all_defaults = json.load(defaults_f)
-        all_metadata = json.load(metadata_f)
+    all_metadata = load_json(metadata_path)
+    all_defaults = load_json(defaults_path)
 
     # could also just raise warning here
     # then iterate on intersection of keys later
@@ -95,18 +99,18 @@ def build_parser():
 
     subparsers  = parser.add_subparsers()
 
-    with open("./subparsers.json") as subparsers_file:
-        for subparser_name, metadata in json.load(subparsers_file).items():
-            # TODO: handle option aliases
-            subparser = subparsers.add_parser(
-                subparser_name,
-                formatter_class = argparse.ArgumentDefaultsHelpFormatter
-            )
-            add_arguments(
-                subparser,
-                metadata['defaults_path'],
-                metadata['metadata_path'],
-            )
+    subparsers_json = load_json("./subparsers.json")
+    for subparser_name, metadata in subparsers_json.items():
+        # TODO: handle option aliases
+        subparser = subparsers.add_parser(
+            subparser_name,
+            formatter_class = argparse.ArgumentDefaultsHelpFormatter
+        )
+        add_arguments(
+            subparser,
+            metadata['defaults_path'],
+            metadata['metadata_path'],
+        )
 
     parser.parse_args()
 
