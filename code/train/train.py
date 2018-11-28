@@ -8,8 +8,8 @@ from defaults import load_from_json
 
 def train():
     parsed = vars(parse())
-    jsons = [load_from_json(val) for _, val in parsed.items()]
-    train_model(*jsons)
+    jsons = {key: load_from_json(val) for key, val in parsed.items()}
+    train_model(**jsons)
 
 def train_model(model, dataset, train):
     print(f'Model: {model}\n')
