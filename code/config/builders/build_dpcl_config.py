@@ -39,7 +39,7 @@ def build_dpcl_config(options):
                     'hidden_size': (2 * options['hidden_size'] if options['bidirectional']
                                     else options['hidden_size']),
                     'embedding_size': options['embedding_size'],
-                    'activation': options['embedding_activation']
+                    'activation': options['embedding_activations']
                 }
             },
         },

@@ -11,5 +11,6 @@
   "embedding_activations": ["sigmoid", "unitnorm"],
   "mask_activation": ["softmax"],
   "projection_trainable": false,
-  "rnn_type": "lstm"
+  "rnn_type": "lstm",
+  "trainable": "?"
 }

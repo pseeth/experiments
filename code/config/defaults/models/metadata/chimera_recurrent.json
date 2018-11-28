@@ -53,5 +53,8 @@
     "type": "str.lower",
     "choices": ["lstm", "gru"],
     "help": "Type of RNN (recursive neural net)"
+  },
+  "trainable": {
+    "help": "TODO: fill this out"
   }
 }

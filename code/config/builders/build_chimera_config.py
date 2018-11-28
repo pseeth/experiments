@@ -45,7 +45,7 @@ def build_chimera_config(options):
                         else options['hidden_size']
                     ),
                     'embedding_size': options['embedding_size'],
-                    'activation': options['embedding_activation']
+                    'activation': options['embedding_activations']
                 }
             },
             'masks': {
