@@ -55,6 +55,7 @@
     "help": "Type of RNN (recursive neural net)"
   },
   "trainable": {
-    "help": "TODO: fill this out"
+    "action": "store_true",
+    "help": "Whether or not Mel projection is trainable"
   }
 }
