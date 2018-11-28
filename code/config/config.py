@@ -11,11 +11,11 @@ sys.path.insert(0, "./utils")
 from defaults import save_to_json
 # TODO: remove hack
 
-def build_model(key, options=None, defaults=None):
+def build_model(key, options=None):
     builders = {
         'chimera_recurrent': build_chimera_config,
         'dpcl_recurrent': build_dpcl_config,
-        'mask_inference_recurrent': build_mi_config
+        'mask_inference_recurrent': build_mask_inference_config,
     }
 
     return builders[key](options)
@@ -23,8 +23,16 @@ def build_model(key, options=None, defaults=None):
 def config():
     args = vars(build_parser())
     print(args)
-    if args.get('subparser'):
-        save_to_json(f'./{args.pop("subparser")}.json', args)
+    if 'subparser' in args:
+        subparser_name = args.pop('subparser')
+        save_to_json(
+            f'./{subparser_name}.json',
+            (
+                args
+                if subparser_name in ['dataset', 'train']
+                else build_model(subparser_name, args)
+            )
+        )
 
 if __name__ == "__main__":
     config()
