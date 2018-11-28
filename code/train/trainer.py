@@ -71,10 +71,10 @@ class Trainer():
         self.loss_keys = sorted(list(self.loss_dictionary))
         self.options = options
 
-        #self.dataloaders = {
-        #    'training': self.create_dataloader(train_data),
-        #    'validation': self.create_dataloader(validation_data)
-        #}
+        self.dataloaders = {
+            'training': self.create_dataloader(train_data),
+            'validation': self.create_dataloader(validation_data)
+        }
 
         self.optimizer = self.create_optimizer(self.model, self.options)
 
