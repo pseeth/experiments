@@ -1,4 +1,4 @@
-def build_mi_config(options=None):
+def build_mask_inference_config(options=None):
     options['num_features'] = (
         options['num_mels']
         if options['num_mels'] > 0

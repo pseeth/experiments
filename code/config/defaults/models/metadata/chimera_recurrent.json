@@ -53,5 +53,9 @@
     "type": "str.lower",
     "choices": ["lstm", "gru"],
     "help": "Type of RNN (recursive neural net)"
+  },
+  "trainable": {
+    "action": "store_true",
+    "help": "Whether or not Mel projection is trainable"
   }
 }

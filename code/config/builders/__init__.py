@@ -1,3 +1,3 @@
 from .build_chimera_config import build_chimera_config
 from .build_dpcl_config import build_dpcl_config
-from .build_mi_config import build_mi_config
+from .build_mask_inference_config import build_mask_inference_config

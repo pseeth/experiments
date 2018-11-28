@@ -9,7 +9,7 @@ import shutil
 # TODO: remove hack
 import sys
 sys.path.insert(0, "../utils")
-from load import load_json
+from defaults import load_from_json
 # TODO: remove hack
 
 class BaseDataset(Dataset):
@@ -25,8 +25,10 @@ class BaseDataset(Dataset):
             description.
         """
 
-        defaults = load_json('../config/defaults/dataset.json')
-        self.options = {**defaults, **(options if options else {})}
+        self.options = {
+            **load_from_json('../config/defaults/dataset.json'),
+            **(options if options else {})
+        }
         self.folder = folder
         self.files = self.get_files(self.folder)
 
