@@ -1,15 +1,12 @@
 {
   "training_folder": {
-    "is_positional": true,
     "nargs": "*",
     "help": "Path(s) to folder(s) contianing training data."
   },
   "validation_folder": {
-    "is_positional": true,
     "help": "Path to folder containing validation data."
   },
   "output_folder": {
-    "is_positional": true,
     "help": "Path to folder to write output to (this includes logs &  checkpoints)."
   },
   "num_epochs": {

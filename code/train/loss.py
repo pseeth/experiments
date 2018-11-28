@@ -3,19 +3,6 @@ import torch.nn as nn
 import numpy as np
 from itertools import permutations
 
-def weighted_cross_entropy(loss_function, spectrogram, source_masks, source_ibms, threshold):
-    weights = spectrogram.view(spectrogram.shape[0], -1)
-    weights -= weights.min(keepdim=True, dim=-1)[0]
-    weights /= weights.max(keepdim=True, dim=-1)[0]
-    weights = torch.sqrt((weights))
-    if threshold is not None:
-        weights[weights < threshold] = 0
-    weights = weights.view(-1)
-    losses = loss_function(source_masks.view(-1, source_masks.shape[-1]), 
-           torch.argmax(source_ibms.view(-1, source_masks.shape[-1]), dim=-1).long())
-    loss = (losses * weights).sum() / weights.sum()
-    return loss
-
 class DeepClusteringLoss(nn.Module):
     def __init__(self):
         """
@@ -51,13 +38,6 @@ class DeepClusteringLoss(nn.Module):
         yTy = ((assignments.transpose(2, 1) @ assignments) ** 2).sum()
         loss = (vTv - 2 * vTy + yTy) / norm.detach()
         return loss
-
-
-def sparse_orthogonal_loss(attractors, weights=(1., 1.)):
-    #l1_norm = torch.mean(torch.norm(attractors, dim=-1, p=1))
-    non_overlap = torch.mean(torch.bmm(torch.abs(attractors), torch.abs(attractors).permute(0, 2, 1)))
-    orth_loss = torch.mean(torch.bmm(attractors, attractors.permute(0, 2, 1)))
-    return weights[0]*non_overlap + weights[1]*orth_loss
 
 class PermutationInvariantLoss(nn.Module):
     def __init__(self, loss_function):

@@ -9,5 +9,8 @@
   "optimizer": "adam",
   "curriculum_learning": true,
   "initial_length": 400,
-  "weight_decay": 0.0
+  "weight_decay": 0.0,
+  "training_folder": "",
+  "validation_folder": "",
+  "output_folder": ""
 }
