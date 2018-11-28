@@ -5,7 +5,7 @@
   "patience": 5,
   "batch_size": 5,
   "num_workers": 5,
-  "loss_function_classes_targets_weights": [["dpcl", "embeddings", 1.0]],
+  "loss_function": [],
   "optimizer": "adam",
   "curriculum_learning": true,
   "initial_length": 400,
