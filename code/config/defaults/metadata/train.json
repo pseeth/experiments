@@ -45,10 +45,24 @@
     "choices": ["adam", "rmsprop", "sgd"],
     "help": "Optimizer for gradient descent"
   },
+  "device": {
+    "type": "str.lower",
+    "choices": ["cuda", "cpu"],
+    "help": "Train using GPU or CPU."
+  },
+  "data_parallel": {
+    "action": "store_true",
+    "help": "Train across all available GPUs using DataParallel."
+  },
   "curriculum_learning": {
     "action": "store_true",
     "help": "Whether or not to perform curriculum learning"
-	},
+  },
+  "sample_strategy": {
+    "type": "str.lower",
+    "choices": ["sequential", "random"],
+    "help": "Strategy for sampling training examples."
+  },
   "initial_length": {
     "type": "float",
     "help": "Fraction of initial length to use (for curriculum learning)"

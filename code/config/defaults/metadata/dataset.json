@@ -40,11 +40,6 @@
     "type": "float",
     "help": "Decibel (db) threshold to retain time-frequency (TF) bins. All bins with magnitudes below this value will be ignored."
   },
-  "sample_strategy": {
-    "type": "str.lower",
-    "choices": ["sequential", "random"],
-    "help": "Strategy for sampling training examples."
-  },
   "num_channels": {
     "type": "int",
     "help": "Number of channels of audio. 1 for mono, 2 for stereo, etc."

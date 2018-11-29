@@ -21,9 +21,10 @@ class BaseDataset(Dataset):
 
         self.folder = folder
         self.files = self.get_files(self.folder)
+        self.options = options
 
         if self.options['cache']:
-            self.cache_location = os.path.join(folder, 'cache', self.options['output_type'], self.options['weight_type'])
+            self.cache_location = os.path.join(folder, 'cache', self.options['output_type'], '_'.join(self.options['weight_type']))
             shutil.rmtree(self.cache_location, ignore_errors=True)
             os.makedirs(self.cache_location, exist_ok=True)
 

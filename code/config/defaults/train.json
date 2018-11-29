@@ -10,7 +10,10 @@
   "curriculum_learning": true,
   "initial_length": 400,
   "weight_decay": 0.0,
+  "device": "cuda",
+  "data_parallel": true,
   "training_folder": "",
   "validation_folder": "",
-  "output_folder": ""
+  "output_folder": "",
+  "sample_strategy": "sequential"
 }
