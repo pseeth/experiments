@@ -1,6 +1,4 @@
-[submodule "code/conditional_attractors"]
-	path = code/conditional_attractors
-	url = git@github.com:pseeth/conditional_attractors.git
 [submodule "code/nussl"]
 	path = code/nussl
 	url = https://github.com/interactiveaudiolab/nussl
+	branch = py3
