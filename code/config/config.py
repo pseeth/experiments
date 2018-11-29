@@ -1,3 +1,4 @@
+from utils.defaults import save_to_json
 from builders import (
     build_chimera_config,
     build_dpcl_config,
@@ -5,12 +6,6 @@ from builders import (
 )
 from parser import build_parser
 import os
-
-# TODO: remove hack
-import sys
-sys.path.insert(0, "./utils")
-from defaults import save_to_json
-# TODO: remove hack
 
 def build_model(key, options=None):
     builders = {
