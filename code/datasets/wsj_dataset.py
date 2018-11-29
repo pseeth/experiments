@@ -14,7 +14,7 @@ class WSJ(BaseDataset):
         files = [x for x in os.listdir(os.path.join(folder, 'mix')) if '.wav' in x]
         files = sorted([x for x in os.listdir(os.path.join(folder, 'mix')) if '.wav' in x])
 
-        self.speaker_folders = sorted([x for x in os.listdir(folder) if 's' in x])
+        self.speaker_folders = sorted([x for x in os.listdir(folder) if 's' in x and x != 'scaling.mat'])
         self.num_speakers = len(self.speaker_folders)
         return files 
 

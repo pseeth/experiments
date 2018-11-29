@@ -45,10 +45,10 @@ class BaseDataset(Dataset):
     def __getitem__(self, i):
         _file = self.files[i]
         if self.options['cache']:
-            mix, sources, labels = self.load_audio_files(_file)
+            mix, sources, classes = self.load_audio_files(_file)
             output = self.construct_input_output(mix, sources)
             output['log_spectrogram'] = self.whiten(output['log_spectrogram'])
-            output['labels'] = labels
+            output['classes'] = classes
             output = self.get_target_length_and_transpose(output, self.options['length'])
             self.write_to_cache(output, '%06d.pth' % i)
         else:

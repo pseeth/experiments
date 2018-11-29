@@ -20,15 +20,16 @@ class Trainer():
                  train_data,
                  validation_data,
                  model,
-                 options):
+                 options,
+                 verbose=True):
 
+        self.verbose = verbose
         self.prepare_directories(output_folder)
         self.model = self.build_model(model)
-        self.device = (torch.device('cuda') if options['device'] == 'cuda'
-            else torch.device('cpu'))
+        self.device = torch.device("cuda" if options['device'] == 'cuda' else "cpu")
         self.model = self.model.to(self.device)
 
-        self.writer = SummaryWriter(log_dir=self.output_folder)
+        self.writer = SummaryWriter(log_dir=self.output_folder) if verbose else None
         self.loss_dictionary = {target: (LossFunctions[fn.upper()].value(), float(weight))
                             for (fn, target, weight) in options['loss_function']}
         self.loss_keys = sorted(list(self.loss_dictionary))
@@ -42,7 +43,7 @@ class Trainer():
         self.optimizer, self.scheduler = self.create_optimizer_and_scheduler(self.model, self.options)
         self.module = self.model
         if options['data_parallel'] and options['device'] == 'cuda':
-            self.model = nn.DataParallel(model)
+            self.model = nn.DataParallel(self.model)
             self.module = self.model.module
         self.model.train()
 
@@ -116,13 +117,17 @@ class Trainer():
         for data in dataloader:
             for key in data:
                 data[key] = data[key].float().to(self.device)
-                if key in self.input_keys:
-                    data[key] = data[key.requires_grad_()]
+                data[key] = data[key].requires_grad_()
+                print(key, data[key].shape)
+            break
+        
             
 
         return
 
     def fit(self):
+        progress_bar = 
+        self.fit_epoch(self.dataloaders['training'])
         return
 
     def validate(self):

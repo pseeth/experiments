@@ -2,6 +2,7 @@ from torch import nn
 import json
 from . import modules
 import torch
+import numpy as np
 
 class SeparationModel(nn.Module):
     def __init__(self, config):
@@ -113,3 +114,12 @@ class SeparationModel(nn.Module):
         """
         torch.save({'state_dict': self.state_dict(),
                     'model': self}, location)
+    
+    def __repr__(self):
+        output = super().__repr__()
+        num_parameters = 0
+        for p in self.parameters():
+            if p.requires_grad:
+                num_parameters += np.cumprod(p.size())[-1]
+        output += '\nNumber of parameters: %d' % num_parameters
+        return output

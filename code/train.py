@@ -43,11 +43,7 @@ def train(model, dataset, train):
                       validation_data = validation_data,
                       model = model,
                       options = train)
-
-
-    print(f'Model: {model}\n')
-    print(f'Dataset: {dataset}\n')
-    print(f'Train: {train}\n')
+    trainer.fit()
 
 if __name__ == "__main__":
     parsed = vars(parse())
