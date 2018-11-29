@@ -1,4 +1,4 @@
 [submodule "code/nussl"]
 	path = code/nussl
 	url = https://github.com/interactiveaudiolab/nussl
-	branch = py3
+	branch = py3-networks
