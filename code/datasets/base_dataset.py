@@ -6,14 +6,8 @@ import numpy as np
 import os
 import shutil
 
-# TODO: remove hack
-import sys
-sys.path.insert(0, "../utils")
-from defaults import load_from_json
-# TODO: remove hack
-
 class BaseDataset(Dataset):
-    def __init__(self, folder, options=None):
+    def __init__(self, folder, options):
         """This base class implements a variety of methods for loading source separation datasets such as WSJ0-[2,3]mix and datasets made with
         Scaper.
         
@@ -25,10 +19,6 @@ class BaseDataset(Dataset):
             description.
         """
 
-        self.options = {
-            **load_from_json('../config/defaults/dataset.json'),
-            **(options if options else {})
-        }
         self.folder = folder
         self.files = self.get_files(self.folder)
 

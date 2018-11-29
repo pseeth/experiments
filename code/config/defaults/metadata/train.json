@@ -38,7 +38,7 @@
     "nargs": 3,
     "action": "append",
     "metavar": ["FUNCTION", "TARGET", "WEIGHT"],
-    "help": "Triple of loss function, target model output on which to compute loss function and weight. `FUNCTION` may be any of the following: ['L1', 'DPCL', 'MSE', 'KL']. Multiple loss function triples may be specified, each triple to its own `-lfctw` flag. E.g. to specify two different loss functions: `... -loss_function L1 masks .4 -lfctw DPCL embeddings .6`"
+    "help": "Triple of loss function, target model output on which to compute loss function and weight. `FUNCTION` may be any of the following: ['L1', 'DPCL', 'MSE', 'KL']. Multiple loss function triples may be specified, each triple to its own `-loss_function` flag. E.g. to specify two different loss functions: `... --loss_function mse masks .4 --loss_function dpcl embeddings .6`"
   },
   "optimizer": {
     "type": "str.lower",

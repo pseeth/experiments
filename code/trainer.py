@@ -9,12 +9,6 @@ from loss import DeepClusteringLoss, PermutationInvariantLoss
 import numpy as np
 import networks
 
-# TODO: remove hack
-import sys
-sys.path.insert(0, "../utils")
-from defaults import load_from_json
-# TODO: remove hack
-
 class Samplers(Enum):
     SEQUENTIAL = sampler.SequentialSampler
     RANDOM = sampler.RandomSampler
@@ -43,12 +37,7 @@ class Trainer():
                  validation_data,
                  model,
                  loss_tuples,
-                 options=None):
-
-        options = {
-            **load_from_json('../config/defaults/train.json'),
-            **(options if options else {})
-        }
+                 options):
 
         if type(model) is str:
             if '.json' in model:

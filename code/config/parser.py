@@ -112,7 +112,7 @@ def build_parser():
             metadata['metadata_path'],
         )
 
-    return parser.parse_args()
+    return parser
 
 if __name__ == "__main__":
     build_parser()

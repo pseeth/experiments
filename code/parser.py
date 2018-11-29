@@ -6,17 +6,20 @@ def parse():
     )
 
     parser.add_argument(
-        'train',
+        '--train',
+        required=True,
         help='Path to JSON containing training configuration',
     )
 
     parser.add_argument(
-        'model',
+        '--model',
+        required=True,
         help='Path to JSON containing model configuration',
     )
 
     parser.add_argument(
-        'dataset',
+        '--dataset',
+        required=True,
         help='Path to JSON containing dataset configuration',
     )
 
