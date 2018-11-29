@@ -3,6 +3,7 @@ import json
 from . import modules
 import torch
 import numpy as np
+from itertools import chain
 
 class SeparationModel(nn.Module):
     def __init__(self, config):
@@ -89,12 +90,25 @@ class SeparationModel(nn.Module):
         if not all(name in list(data) for name in list(self.input)):
             raise ValueError("Not all keys present in data! Needs {}".format(', '.join(self.input)))
         output = {}
+        all_connections = [[connection[0]] + connection[1] for connection in self.connections]
+        all_connections = list(chain.from_iterable(all_connections))
+        marked_for_deletion = []
+
         for connection in self.connections:
             layer = self.layers[connection[0]]
-            input_data = [data[c] if c in self.input else output[c] for c in connection[1]]
+            input_data = []
+            for c in connection[1]:
+                input_data.append(output[c] if c in output else data[c])
+                all_connections.remove(c)
+                if c not in all_connections:
+                    marked_for_deletion.append(c)
             output[connection[0]] = layer(*input_data)
-        output = {o: output[o] for o in self.output_keys}
-        return output
+
+            for c in marked_for_deletion:
+                if c in output:
+                    output.pop(c)
+
+        return {o: output[o] for o in self.output_keys}
 
     def project_assignments(self, data):
         if 'mel_projection' in self.layers:

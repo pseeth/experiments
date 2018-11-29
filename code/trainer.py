@@ -11,7 +11,7 @@ import os
 import shutil
 
 OutputTargetMap = {
-    'estimates': ['sources'],
+    'estimates': ['source_spectrograms'],
     'embedding': ['assignments', 'weights']
 }
 
@@ -49,7 +49,6 @@ class Trainer():
             self.module = self.model.module
         self.model.train()
 
-
     @staticmethod
     def build_model(model):
         if type(model) is str:
@@ -58,7 +57,6 @@ class Trainer():
         if type(model) is dict:
             model = networks.SeparationModel(model)
         return model
-
 
     def prepare_directories(self, output_folder):
         self.output_folder = output_folder
@@ -69,15 +67,15 @@ class Trainer():
         os.makedirs(self.checkpoint_folder, exist_ok=True)
         os.makedirs(self.config_folder, exist_ok=True)
 
-
     def create_dataloader(self, dataset):
+        if not dataset:
+            return None
         _sampler = Samplers[self.options['sample_strategy'].upper()].value(dataset)
         dataloader = DataLoader(dataset,
                                 batch_size=self.options['batch_size'],
                                 num_workers=self.options['num_workers'],
                                 sampler=_sampler)
         return dataloader
-
 
     def create_optimizer_and_scheduler(self, model, options):
         parameters = filter(lambda p: p.requires_grad, model.parameters())
@@ -90,7 +88,6 @@ class Trainer():
                                                                factor=options['learning_rate_decay'],
                                                                patience=options['patience'])
         return optimizer, scheduler
-
 
     def calculate_loss(self, outputs, targets):
         if self.module.layers['mel_projection'].num_mels > 0:
@@ -109,77 +106,65 @@ class Trainer():
             loss[key] = _loss
         return loss
 
-
     def check_loss(self, loss):
         if np.isnan(loss.item()):
             raise ValueError("Loss went to nan - aborting training.")
 
-
     def run_epoch(self, dataloader):
-        losses = []
+        epoch_loss = 0
         step = 0
-        progress_bar = trange(len(dataloader))
+        num_examples = len(dataloader)
         for data in dataloader:
             for key in data:
                 data[key] = data[key].float().to(self.device)
                 if key not in self.loss_keys and self.model.training:
                     data[key] = data[key].requires_grad_()
-
             output = self.model(data)
-            target = {key: data[key] for key in self.loss_dictionary}
-            loss = self.calculate_loss(output, target)
-
-            self.log_to_tensorboard(loss, step, 'iter')
-            step += 1
-            loss = sum(list(losses.values()))
-            losses.append(loss.item())
+            loss = self.calculate_loss(output, data)
+            loss['total_loss'] = sum(list(loss.values()))
+            epoch_loss += loss['total_loss'].item()
 
             if self.model.training:
+                self.log_to_tensorboard({k: loss[k].item() for k in loss}, step, 'iter')
                 self.optimizer.zero_grad()
-                loss.backward()
+                loss['total_loss'].backward()
                 self.optimizer.step()
-
-            progress_bar.update(1)
-            progress_bar.set_description('Loss: {.04f}'.format(losses[-1]))
-
-        return {'loss': np.mean(losses)}
-
+            step += 1
+        return {'loss': epoch_loss / float(num_examples)}
 
     def log_to_tensorboard(self, data, step, scope):
-        if not self.verbose:
-            return
-        prefix = 'training' if self.model.training else 'validation'
-
-        for key in data:
-            label = os.path.join(prefix, key)
-            self.writer.add_scalar(label, data[key].item(), step)
-
+        if self.verbose:
+            prefix = 'training' if self.model.training else 'validation'
+            for key in data:
+                label = os.path.join(prefix, key)
+                self.writer.add_scalar(label, data[key], step)
 
     def fit(self):
         progress_bar = trange(self.num_epoch, self.options['num_epochs'])
         lowest_validation_loss = np.inf
-        for num_epoch in progress_bar:
-            self.num_epoch = num_epoch
-            epoch_loss = self.fit_epoch(self.dataloaders['training'])
+        for self.num_epoch in progress_bar:
+            epoch_loss = self.run_epoch(self.dataloaders['training'])
             self.log_to_tensorboard(epoch_loss, self.num_epoch, 'epoch')
             validation_loss = self.validate(self.dataloaders['validation'])
-            self.save(validation_loss < lowest_validation_loss)
+            self.save(validation_loss <= lowest_validation_loss)
 
             progress_bar.update(1)
-            progress_bar.set_description('Loss: {.04f}'.format(epoch_loss['loss']))
+            progress_bar.set_description('Loss: {:.4f}'.format(epoch_loss['loss']))
 
-        return
+            if self.num_epoch == 0:
+                for key in self.dataloaders:
+                    self.dataloaders[key].dataset.toggle_cache()
 
-  
     def validate(self, dataloader):
+        if not dataloader:
+            return 0
         self.model.eval()
         with torch.no_grad():
-            validation_loss = self.run_epoch(dataloader)['loss']
+            validation_loss = self.run_epoch(dataloader)
         self.log_to_tensorboard(validation_loss, self.num_epoch, 'epoch')
         self.model.train()
-        self.scheduler.step(validation_loss)
-        return validation_loss
-
+        self.scheduler.step(validation_loss['loss'])
+        return validation_loss['loss']
     
     def save(self, best):
         prefix = 'best' if best else 'latest'
@@ -193,7 +178,6 @@ class Trainer():
 
         torch.save(optimizer_state, optimizer_path)
         self.module.save(model_path)
-
     
     def resume(self, prefix='best'):
         optimizer_path = os.path.join(self.checkpoint_folder, f'{prefix}.opt.pth')

@@ -1,27 +1,27 @@
 {
   "dpcl_recurrent": {
     "help": "Construct a recurrent Deep Clustering model",
-    "defaults_path": "./config/defaults/models/dpcl_recurrent.json",
-    "metadata_path": "./config/defaults/models/metadata/dpcl_recurrent.json"
+    "defaults_path": "config/defaults/models/dpcl_recurrent.json",
+    "metadata_path": "config/defaults/models/metadata/dpcl_recurrent.json"
   },
   "mask_inference_recurrent": {
     "help": "Construct a recurrent Mask Inference model",
-    "defaults_path": "./config/defaults/models/mask_inference_recurrent.json",
-    "metadata_path": "./config/defaults/models/metadata/mask_inference_recurrent.json"
+    "defaults_path": "config/defaults/models/mask_inference_recurrent.json",
+    "metadata_path": "config/defaults/models/metadata/mask_inference_recurrent.json"
   },
   "chimera_recurrent": {
     "help": "Construct a recurrent Chimera model",
-    "defaults_path": "./config/defaults/models/chimera_recurrent.json",
-    "metadata_path": "./config/defaults/models/metadata/chimera_recurrent.json"
+    "defaults_path": "config/defaults/models/chimera_recurrent.json",
+    "metadata_path": "config/defaults/models/metadata/chimera_recurrent.json"
   },
   "dataset": {
     "help": "Parameters to specify and manipulate training dataset",
-    "defaults_path": "./config/defaults/dataset.json",
-    "metadata_path": "./config/defaults/metadata/dataset.json"
+    "defaults_path": "config/defaults/dataset.json",
+    "metadata_path": "config/defaults/metadata/dataset.json"
   },
   "train": {
     "help": "Parameters to dictate training behavior",
-    "defaults_path": "./config/defaults/train.json",
-    "metadata_path": "./config/defaults/metadata/train.json"
+    "defaults_path": "config/defaults/train.json",
+    "metadata_path": "config/defaults/metadata/train.json"
   }
 }

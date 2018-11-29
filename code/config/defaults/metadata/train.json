@@ -6,9 +6,6 @@
   "validation_folder": {
     "help": "Path to folder containing validation data."
   },
-  "output_folder": {
-    "help": "Path to folder to write output to (this includes logs &  checkpoints)."
-  },
   "num_epochs": {
     "type": "int",
     "help": "Number of training epochs. One epoch means one run through all given training data."

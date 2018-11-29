@@ -11,8 +11,4 @@ fi
 docker build \
     --build-arg user_id=$UID \
     --build-arg user_name=`whoami` \
-    -t thesis docker/
-
-echo "1" > ../DOCKER
-
-#nvidia-docker run --rm -t --entrypoint nvidia-smi thesis
+    -t local/thesis docker/

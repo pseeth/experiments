@@ -1,12 +1,5 @@
 import argparse
-
-# TODO: remove hack
-import sys
-sys.path.insert(0, "./utils")
-from defaults import load_from_json
-# TODO: remove hack
-
-# TODO: add typing
+from utils.defaults import load_from_json
 
 def preprocess_metadata(option_name: str, metadata, default=None):
     """Massage data for splatting into `add_argument()`
@@ -99,7 +92,7 @@ def build_parser():
 
     subparsers = parser.add_subparsers(dest='subparser')
 
-    subparsers_json = load_from_json("./config/subparsers.json")
+    subparsers_json = load_from_json("config/subparsers.json")
     for subparser_name, metadata in subparsers_json.items():
         # TODO: handle option aliases
         subparser = subparsers.add_parser(

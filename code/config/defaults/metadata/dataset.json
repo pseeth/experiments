@@ -22,6 +22,11 @@
     "choices": ["psa", "msa"],
     "help": "Type of output, either phase sensitive or mask sensitive approximation."
   },
+  "format": {
+    "type": "str.lower",
+    "choices": ["rnn", "cnn"],
+    "help": "Format for dataset output. 'rnn' produces [num_batch, sequence_length, num_frequencies*num_channels, ...], while 'cnn' produces [num_batch, num_channels, num_frequencies, sequence_length, ...]. The '...' is there because different outputs have different number of trailing dimensions."
+  },
   "cache": {
     "action": "store_true",
     "help": "Whether or not to cache training data for faster training."

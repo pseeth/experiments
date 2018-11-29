@@ -5,6 +5,7 @@ from scipy.io import wavfile
 import numpy as np
 import os
 import shutil
+from random import shuffle
 
 class BaseDataset(Dataset):
     def __init__(self, folder, options):
@@ -22,6 +23,13 @@ class BaseDataset(Dataset):
         self.folder = folder
         self.files = self.get_files(self.folder)
         self.options = options
+        self.targets = [
+            'log_spectrogram', 
+            'magnitude_spectrogram', 
+            'assignments', 
+            'source_spectrograms', 
+            'weights'
+        ]
 
         if self.options['cache']:
             self.cache_location = os.path.join(folder, 'cache', self.options['output_type'], '_'.join(self.options['weight_type']))
@@ -50,10 +58,31 @@ class BaseDataset(Dataset):
             output['log_spectrogram'] = self.whiten(output['log_spectrogram'])
             output['classes'] = classes
             output = self.get_target_length_and_transpose(output, self.options['length'])
+            output = self.format_output(output)
             self.write_to_cache(output, '%06d.pth' % i)
         else:
             output = self.load_from_cache('%06d.pth' % i)
         return output
+
+    def format_output(self, output):
+        """[num_batch, sequence_length, num_frequencies*num_channels, ...], 
+        while 'cnn' produces [num_batch, num_channels, num_frequencies, sequence_length, ...]
+        """
+        for key in self.targets:
+            if self.options['format'] == 'rnn':
+                _shape = output[key].shape
+                shape = [_shape[0], _shape[1]*_shape[2]]
+                if len(_shape) > 3:
+                    shape += _shape[3:]
+                output[key] = np.reshape(output[key], shape)
+            elif self.options['format'] == 'cnn':
+                axes_loc = [0, 3, 2, 1]
+                output[key] = np.moveaxis(output[key], [0, 1, 2, 3], axes_loc)
+
+        return output
+
+    def toggle_cache(self):
+        self.options['cache'] = not self.options['cache']
 
     def write_to_cache(self, data_dict, file_name):
         with open(os.path.join(self.cache_location, file_name), 'wb') as f:
@@ -108,7 +137,7 @@ class BaseDataset(Dataset):
 
     def get_target_length_and_transpose(self, data_dict, target_length):
         length = data_dict['log_spectrogram'].shape[1]
-        targets = ['log_spectrogram', 'magnitude_spectrogram', 'assignments', 'source_spectrograms', 'weights']
+        
         if target_length == 'full':
             target_length = length
         if length > target_length:
@@ -116,7 +145,7 @@ class BaseDataset(Dataset):
         else:
             offset = 0
 
-        for i, target in enumerate(targets):
+        for i, target in enumerate(self.targets):
             data = data_dict[target]
             pad_length = max(target_length - length, 0)
             pad_tuple = [(0, 0) for k in range(len(data.shape))]

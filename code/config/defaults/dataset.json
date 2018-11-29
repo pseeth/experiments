@@ -1,6 +1,6 @@
 {
-  "n_fft": 512,
-  "hop_length": 128,
+  "n_fft": 256,
+  "hop_length": 64,
   "length": 400,
   "output_type": "psa",
   "cache": true,
@@ -10,5 +10,6 @@
   "num_channels": 1,
   "group_sources": [],
   "source_labels": [],
-  "ignore_sources": []
+  "ignore_sources": [],
+  "format": "rnn"
 }
