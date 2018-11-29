@@ -7,7 +7,7 @@
   "num_layers": 4,
   "embedding_size": 20,
   "dropout": 0.3,
-  "embedding_activations": ["sigmoid", "unitnorm"],
+  "embedding_activations": ["tanh"],
   "projection_trainable": false,
   "rnn_type": "lstm"
 }

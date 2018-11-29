@@ -113,7 +113,7 @@ class Trainer():
     def run_epoch(self, dataloader):
         epoch_loss = 0
         step = 0
-        num_examples = len(dataloader)
+        num_batches = len(dataloader)
         for data in dataloader:
             for key in data:
                 data[key] = data[key].float().to(self.device)
@@ -125,12 +125,12 @@ class Trainer():
             epoch_loss += loss['total_loss'].item()
 
             if self.model.training:
-                self.log_to_tensorboard({k: loss[k].item() for k in loss}, step, 'iter')
+                self.log_to_tensorboard({k: loss[k].item() for k in loss}, step + self.num_epoch * num_batches, 'iter')
                 self.optimizer.zero_grad()
                 loss['total_loss'].backward()
                 self.optimizer.step()
             step += 1
-        return {'loss': epoch_loss / float(num_examples)}
+        return {'loss': epoch_loss / float(num_batches)}
 
     def log_to_tensorboard(self, data, step, scope):
         if self.verbose:

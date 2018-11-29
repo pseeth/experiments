@@ -116,7 +116,7 @@ class Embedding(nn.Module):
 
         data = data.view(data.shape[0], -1, self.num_features, self.embedding_size)
 
-        if 'unit_norm' in  self.activation:
+        if 'unit_norm' in self.activation:
             data = nn.functional.normalize(data, dim=-1, p=2)
 
         return data
