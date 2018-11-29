@@ -5,7 +5,7 @@ import multiprocessing
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
 import numpy as np
-import networks
+from nussl import networks
 from enums import *
 import os
 import shutil
