@@ -170,6 +170,12 @@ class Trainer():
         prefix = 'best' if best else 'latest'
         optimizer_path = os.path.join(self.checkpoint_folder, f'{prefix}.opt.pth')
         model_path = os.path.join(self.checkpoint_folder, f'{prefix}.model.pth')
+        dataset_options = self.dataloaders['training'].dataset['options']
+        metadata = {
+            'n_fft': dataset_options['n_fft'],
+            'hop_length': dataset_options['hop_length'],
+            'format': dataset_options['format']
+        }
         
         optimizer_state = {
             'optimizer': self.optimizer.state_dict(),
@@ -177,7 +183,7 @@ class Trainer():
         }
 
         torch.save(optimizer_state, optimizer_path)
-        self.module.save(model_path)
+        self.module.save(model_path, metadata)
     
     def resume(self, prefix='best'):
         optimizer_path = os.path.join(self.checkpoint_folder, f'{prefix}.opt.pth')
