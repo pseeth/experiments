@@ -11,5 +11,6 @@
   "group_sources": [],
   "source_labels": [],
   "ignore_sources": [],
-  "format": "rnn"
+  "format": "rnn",
+  "sample_rate": 8000
 }

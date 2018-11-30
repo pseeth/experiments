@@ -183,7 +183,7 @@ class Trainer():
         }
 
         torch.save(optimizer_state, optimizer_path)
-        self.module.save(model_path, metadata)
+        self.module.save(model_path, {'metadata': metadata})
     
     def resume(self, prefix='best'):
         optimizer_path = os.path.join(self.checkpoint_folder, f'{prefix}.opt.pth')

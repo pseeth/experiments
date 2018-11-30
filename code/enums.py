@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import sampler
 from torch import nn
 import datasets
-from networks import loss
+import loss
 
 class Datasets(Enum):
     WSJ = datasets.WSJ

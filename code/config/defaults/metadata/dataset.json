@@ -13,6 +13,10 @@
     "type": "int",
     "help": "Number of samples to shift fft (Fast Fourier Transform) window."
   },
+  "sample_rate": {
+    "type": "int",
+    "help": "Sample rate of audio in dataset. If sample rate of audio doesn't match, the audio will be resampled with librosa. This is slow, so it's better to resample your dataset prior to training."
+  },
   "length": {
     "type": "int",
     "help": "Length (in number of frames) of each sequence. If the sequence is shorter it's padded to this value. If the sequence is longer a slice with length equal to this value is taken at a random offset."
