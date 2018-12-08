@@ -51,12 +51,11 @@ class Trainer():
 
     @staticmethod
     def build_model(model):
-        if type(model) is str:
-            if '.json' in model:
-                model = networks.SeparationModel(model)                
-        if type(model) is dict:
-            model = networks.SeparationModel(model)
-        return model
+        return (
+            networks.SeparationModel(model)
+            if (type(model) is str and '.json' in model) or type(model) is dict
+            else model
+        )
 
     def prepare_directories(self, output_folder):
         self.output_folder = output_folder
