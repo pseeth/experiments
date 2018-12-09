@@ -67,11 +67,11 @@ class BaseDataset(Dataset):
         """Gets one item from dataset
 
         Args:
-            i - index of training example to get
+            i - index of example to get
 
         Returns:
             one data point (an output dictionary containing the data comprising
-            one training example)
+            one example)
         """
         return self._get_item_helper(self.files[i], self.cache, i)
 
@@ -83,21 +83,21 @@ class BaseDataset(Dataset):
     ) -> Dict[str, Any]:
         """Gets one item from dataset
 
-        If `cache` is None, will generate a training example from scratch. If
-        `cache` is not None, it will attempt to read from the path given by
-        `cache`. On failure it will write to the path given by `cache` for
-        subsequent reads.
+        If `cache` is None, will generate an example (training|validation) from
+        scratch. If `cache` is not None, it will attempt to read from the path
+        given by `cache`. On failure it will write to the path given by `cache`
+        for subsequent reads.
 
         Args:
-            filename - name of file corresponding to current training example
+            filename - name of file corresponding to current example
             cache - `None` or path to cache folder
-            i - index of current training example (used only in cache filename
+            i - index of current example (used only in cache filename
                 generation). Defaults to -1 (should only be `-1` when `cache` is
                 `None`)
 
         Returns:
             one data point (an output dictionary containing the data comprising
-            one training example)
+            one example)
         """
         if self.cache:
             if i == -1:
@@ -108,22 +108,21 @@ class BaseDataset(Dataset):
             try:
                 return self.load_from_cache(f'{i:08d}.pth')
             except:
-                output = self._generate_training_example(filename)
+                output = self._generate_example(filename)
                 self.write_to_cache(output, f'{i:08d}.pth')
                 return output
         else:
-            return self._generate_training_example(filename)
+            return self._generate_example(filename)
 
-    def _generate_training_example(self, filename: str) -> Dict[str, Any]:
-        """Generates one training example from given filename
+    def _generate_example(self, filename: str) -> Dict[str, Any]:
+        """Generates one example (training|validation) from given filename
 
         Args:
-            filename - name of audio file from which to generate training
-                example
+            filename - name of audio file from which to generate example
 
         Returns:
             one data point (an output dictionary containing the data comprising
-            one training example)
+            one example)
         """
         mix, sources, classes = self.load_audio_files(filename)
         output = self.construct_input_output(mix, sources)
