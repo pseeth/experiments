@@ -9,26 +9,27 @@ from random import shuffle
 from typing import Dict, Any, Optional
 
 class BaseDataset(Dataset):
-    def __init__(self, folder, options):
-        """This base class implements a variety of methods for loading source separation datasets such as WSJ0-[2,3]mix and datasets made with
-        Scaper.
-        
+    def __init__(self, folder: str, options: Dict[str, Any]):
+        """Implements a variety of methods for loading source separation
+        datasets such as WSJ0-[2,3]mix and datasets made with Scaper.
+
         Arguments:
-            folder {str} -- Folder where dataset is contained.
-        
+            folder - Folder where dataset is contained.
+
         Keyword Arguments:
-            options {dict} -- a dictionary containing the settings for the dataset loader. See config/defaults/metadata/dataset.json for full 
-            description.
+            options - a dictionary containing the settings for the dataset
+                loader. See `config/defaults/metadata/dataset.json` for full
+                description.
         """
 
         self.folder = folder
         self.files = self.get_files(self.folder)
         self.options = options
         self.targets = [
-            'log_spectrogram', 
-            'magnitude_spectrogram', 
-            'assignments', 
-            'source_spectrograms', 
+            'log_spectrogram',
+            'magnitude_spectrogram',
+            'assignments',
+            'source_spectrograms',
             'weights'
         ]
         # TODO: handle specifying no value better (maybe map over all options
@@ -50,7 +51,9 @@ class BaseDataset(Dataset):
             os.makedirs(self.cache, exist_ok=True)
 
         if self.options['fraction_of_dataset'] < 1.0:
-            num_files = int(len(self.files) * self.options['fraction_of_dataset'])
+            num_files = int(
+                len(self.files) * self.options['fraction_of_dataset']
+            )
             shuffle(self.files)
             self.files = self.files[:num_files]
 
@@ -166,18 +169,35 @@ class BaseDataset(Dataset):
         return data
 
     def construct_input_output(self, mix, sources):
-        log_spectrogram, mix_stft, _ = self.transform(mix, self.options['n_fft'], self.options['hop_length'])
+        log_spectrogram, mix_stft, _ = self.transform(
+            mix,
+            self.options['n_fft'],
+            self.options['hop_length']
+        )
         mix_magnitude, mix_phase = np.abs(mix_stft), np.angle(mix_stft)
         source_magnitudes = []
         source_log_magnitudes = []
 
         for source in sources:
-            source_log_magnitude, source_stft, _ = self.transform(source, self.options['n_fft'], self.options['hop_length'])
-            source_magnitude, source_phase = np.abs(source_stft), np.angle(source_stft)
+            source_log_magnitude, source_stft, _ = self.transform(
+                source,
+                self.options['n_fft'],
+                self.options['hop_length']
+            )
+            source_magnitude, source_phase = (
+                np.abs(source_stft),
+                np.angle(source_stft)
+            )
             if self.options['output_type'] == 'msa':
                 source_magnitude = np.minimum(mix_magnitude, source_magnitude)
             elif self.options['output_type'] == 'psa':
-                source_magnitude = np.maximum(0.0, np.minimum(mix_magnitude, source_magnitude * np.cos(source_phase - mix_phase)))
+                source_magnitude = np.maximum(
+                    0.0,
+                    np.minimum(
+                        mix_magnitude,
+                        source_magnitude * np.cos(source_phase - mix_phase),
+                    )
+                )
             source_magnitudes.append(source_magnitude)
             source_log_magnitudes.append(source_log_magnitude)
 
@@ -185,7 +205,10 @@ class BaseDataset(Dataset):
         source_log_magnitudes = np.stack(source_log_magnitudes, axis=-1)
 
         shape = source_magnitudes.shape
-        source_log_magnitudes = source_log_magnitudes.reshape(np.prod(shape[0:-1]), shape[-1])
+        source_log_magnitudes = source_log_magnitudes.reshape(
+            np.prod(shape[0:-1]),
+            shape[-1],
+        )
 
         assignments = np.zeros(source_log_magnitudes.shape)
         source_argmax = np.argmax(source_log_magnitudes, axis=-1)
@@ -198,13 +221,16 @@ class BaseDataset(Dataset):
             'assignments': assignments,
             'source_spectrograms': source_magnitudes,
         }
-        output['weights'] = self.get_weights(output, self.options['weight_type'])
+        output['weights'] = self.get_weights(
+            output,
+            self.options['weight_type']
+        )
         return output
 
 
     def get_target_length_and_transpose(self, data_dict, target_length):
         length = data_dict['log_spectrogram'].shape[1]
-        
+
         if target_length == 'full':
             target_length = length
         if length > target_length:
@@ -218,67 +244,91 @@ class BaseDataset(Dataset):
             pad_tuple = [(0, 0) for k in range(len(data.shape))]
             pad_tuple[1] = (0, pad_length)
             data_dict[target] = np.pad(data, pad_tuple, mode='constant')
-            data_dict[target] = data_dict[target][:, offset:offset + target_length, :self.options['num_channels']]
+            data_dict[target] = data_dict[target][
+                :,
+                offset:offset + target_length,
+                :self.options['num_channels']
+            ]
             data_dict[target] = np.swapaxes(data_dict[target], 0, 1)
 
         return data_dict
 
     @staticmethod
     def transform(data, n_fft, hop_length):
-        """Transforms multichannel audio signal into a multichannel spectrogram. 
+        """Transforms multichannel audio signal into a multichannel spectrogram.
 
         Arguments:
             data {[np.ndarray]} -- Audio signal of shape (n_channels, n_samples)
             n_fft {[int]} -- Number of FFT bins for each frame.
             hop_length {[int]} -- Hop between frames.
-        
+
         Returns:
-            [tuple] -- (log_spec, stft, n). log_spec contains the log_spectrogram,
-            stft contains the complex spectrogram, and n is the original length of 
-            the audio signal (used for reconstruction).
+            [tuple] -- (log_spec, stft, n). log_spec contains the
+            log_spectrogram, stft contains the complex spectrogram, and n is the
+            original length of the audio signal (used for reconstruction).
         """
 
         n = data.shape[-1]
         data = librosa.util.fix_length(data, n + n_fft // 2, axis=-1)
-        stft = np.stack([librosa.stft(data[ch], n_fft=n_fft, hop_length=hop_length)
-                         for ch in range(data.shape[0])], axis=-1)
+        stft = np.stack(
+            [
+                librosa.stft(data[ch], n_fft=n_fft, hop_length=hop_length)
+                for ch
+                in range(data.shape[0])
+            ],
+            axis=-1,
+        )
         log_spectrogram = librosa.amplitude_to_db(np.abs(stft), ref=np.max)
         return log_spectrogram, stft, n
 
     @staticmethod
     def invert_transform(data, n, hop_length):
         """Inverts a multichannel complex spectrogram back to the audio signal.
-        
+
         Arguments:
             data {[np.ndarray]} -- Multichannel complex spectrogram
             n {int} -- Original length of audio signal
             hop_length {int} -- Hop length of STFT
-        
+
         Returns:
             Multichannel audio signal
         """
 
-        source = np.stack([librosa.istft(data[:, :, ch], hop_length=hop_length, length=n)
-                           for ch in range(data.shape[-1])], axis=0)
-        return source
-    
+        return np.stack(
+            [
+                librosa.istft(data[:, :, ch], hop_length=hop_length, length=n)
+                for ch
+                in range(data.shape[-1])
+            ],
+            axis=0,
+        )
+
     def get_weights(self, data_dict, weight_type):
         weights = np.ones(data_dict['magnitude_spectrogram'].shape)
         if ('magnitude' in weight_type):
-            weights *= self.magnitude_weights(data_dict['magnitude_spectrogram'])
+            weights *= self.magnitude_weights(
+                data_dict['magnitude_spectrogram']
+            )
         if ('threshold' in weight_type):
-            weights *= self.threshold_weights(data_dict['log_spectrogram'], self.options['weight_threshold'])
+            weights *= self.threshold_weights(
+                data_dict['log_spectrogram'],
+                self.options['weight_threshold']
+            )
         return weights
 
     @staticmethod
     def magnitude_weights(magnitude_spectrogram):
         weights = magnitude_spectrogram / (np.sum(magnitude_spectrogram))
-        weights *= (magnitude_spectrogram.shape[0] * magnitude_spectrogram.shape[1])
+        weights *= (
+            magnitude_spectrogram.shape[0] * magnitude_spectrogram.shape[1]
+        )
         return weights
 
     @staticmethod
     def threshold_weights(log_spectrogram, threshold=-40):
-        return ((log_spectrogram - np.max(log_spectrogram)) > threshold).astype(np.float32)
+        return (
+            (log_spectrogram - np.max(log_spectrogram)) > threshold
+        ).astype(np.float32)
 
     @staticmethod
     def load_audio(file_path):
@@ -309,9 +359,17 @@ class BaseDataset(Dataset):
         def mask_mixture(mask, mix):
             n = len(mix)
             mix = librosa.util.fix_length(mix, n + self.n_fft // 2)
-            mix_stft = librosa.stft(mix, n_fft=self.n_fft, hop_length=self.hop_length)
+            mix_stft = librosa.stft(
+                mix,
+                n_fft=self.n_fft,
+                hop_length=self.hop_length
+            )
             masked_mix = mix_stft * mask
-            source = librosa.istft(masked_mix, hop_length=self.hop_length, length=n)
+            source = librosa.istft(
+                masked_mix,
+                hop_length=self.hop_length,
+                length=n
+            )
             return source
 
         for j in range(len(sources)):
@@ -320,7 +378,10 @@ class BaseDataset(Dataset):
             plt.subplot(121)
             plt.imshow(mask, aspect='auto', origin='lower')
             plt.subplot(122)
-            log_output = librosa.amplitude_to_db(np.abs(output_data[:, :, j].T), ref=np.max)
+            log_output = librosa.amplitude_to_db(
+                np.abs(output_data[:, :, j].T),
+                ref=np.max
+            )
             plt.imshow(log_output, aspect='auto', origin='lower')
             plt.show()
             isolated = mask_mixture(mask, mix)

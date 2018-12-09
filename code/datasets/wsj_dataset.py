@@ -16,7 +16,7 @@ class WSJ(BaseDataset):
 
         self.speaker_folders = sorted([x for x in os.listdir(folder) if 's' in x and x != 'scaling.mat'])
         self.num_speakers = len(self.speaker_folders)
-        return files 
+        return files
 
     def load_audio_files(self, wav_file):
         sources = []
