@@ -31,12 +31,12 @@ class BaseDataset(Dataset):
             'source_spectrograms', 
             'weights'
         ]
-        # TODO: handle `None` specification better (maybe map over all options
-        # converting "None" to `None`?
+        # TODO: handle specifying no value better (maybe map over all options
+        # converting "" to `None`?
         self.cache = (
-            None
-            if self.options['cache'] == 'None'
-            else self.options['cache']
+            self.options['cache']
+            if self.options['cache']
+            else None
         )
 
         if self.cache:
