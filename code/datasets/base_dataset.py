@@ -6,6 +6,7 @@ import numpy as np
 import os
 import shutil
 from random import shuffle
+from typing import Dict, Any, Optional
 
 class BaseDataset(Dataset):
     def __init__(self, folder, options):
@@ -30,11 +31,23 @@ class BaseDataset(Dataset):
             'source_spectrograms', 
             'weights'
         ]
+        # TODO: handle `None` specification better (maybe map over all options
+        # converting "None" to `None`?
+        self.cache = (
+            None
+            if self.options['cache'] == 'None'
+            else self.options['cache']
+        )
 
-        if self.options['cache']:
-            self.cache_location = os.path.join(folder, 'cache', self.options['output_type'], '_'.join(self.options['weight_type']))
-            shutil.rmtree(self.cache_location, ignore_errors=True)
-            os.makedirs(self.cache_location, exist_ok=True)
+        if self.cache:
+            # TODO: currently assumes `~` (make work for windows eventually?)
+            self.cache = os.path.join(
+                os.path.expanduser(self.cache),
+                self.options['output_type'],
+                '_'.join(self.options['weight_type'])
+            )
+            shutil.rmtree(self.cache, ignore_errors=True)
+            os.makedirs(self.cache, exist_ok=True)
 
         if self.options['fraction_of_dataset'] < 1.0:
             num_files = int(len(self.files) * self.options['fraction_of_dataset'])
@@ -44,30 +57,88 @@ class BaseDataset(Dataset):
     def get_files(self, folder):
         raise NotImplementedError()
 
-    def load_audio_files(self, file_name):
+    def load_audio_files(self, filename):
         raise NotImplementedError()
 
     def __len__(self):
         return len(self.files)
 
-    def __getitem__(self, i):
-        _file = self.files[i]
-        if self.options['cache']:
-            mix, sources, classes = self.load_audio_files(_file)
-            output = self.construct_input_output(mix, sources)
-            output['log_spectrogram'] = self.whiten(output['log_spectrogram'])
-            output['classes'] = classes
-            output = self.get_target_length_and_transpose(output, self.options['length'])
-            output = self.format_output(output)
-            self.write_to_cache(output, '%06d.pth' % i)
+    def __getitem__(self, i: int) -> Dict[str, Any]:
+        """Gets one item from dataset
+
+        Args:
+            i - index of training example to get
+
+        Returns:
+            one data point (an output dictionary containing the data comprising
+            one training example)
+        """
+        return self._get_item_helper(self.files[i], self.cache, i)
+
+    def _get_item_helper(
+        self,
+        filename: str,
+        cache: Optional[str],
+        i: int = -1,
+    ) -> Dict[str, Any]:
+        """Gets one item from dataset
+
+        If `cache` is None, will generate a training example from scratch. If
+        `cache` is not None, it will attempt to read from the path given by
+        `cache`. On failure it will write to the path given by `cache` for
+        subsequent reads.
+
+        Args:
+            filename - name of file corresponding to current training example
+            cache - `None` or path to cache folder
+            i - index of current training example (used only in cache filename
+                generation). Defaults to -1 (should only be `-1` when `cache` is
+                `None`)
+
+        Returns:
+            one data point (an output dictionary containing the data comprising
+            one training example)
+        """
+        if self.cache:
+            if i == -1:
+                raise Exception(
+                    '`i` must be a non-negative number when using a cache'
+                )
+
+            try:
+                return self.load_from_cache(f'{i:08d}.pth')
+            except:
+                output = self._generate_training_example(filename)
+                self.write_to_cache(output, f'{i:08d}.pth')
+                return output
         else:
-            output = self.load_from_cache('%06d.pth' % i)
-        return output
+            return self._generate_training_example(filename)
+
+    def _generate_training_example(self, filename: str) -> Dict[str, Any]:
+        """Generates one training example from given filename
+
+        Args:
+            filename - name of audio file from which to generate training
+                example
+
+        Returns:
+            one data point (an output dictionary containing the data comprising
+            one training example)
+        """
+        mix, sources, classes = self.load_audio_files(filename)
+        output = self.construct_input_output(mix, sources)
+        output['log_spectrogram'] = self.whiten(output['log_spectrogram'])
+        output['classes'] = classes
+        output = self.get_target_length_and_transpose(
+            output,
+            self.options['length']
+        )
+        return self.format_output(output)
 
     def format_output(self, output):
-        """[num_batch, sequence_length, num_frequencies*num_channels, ...], 
-        while 'cnn' produces [num_batch, num_channels, num_frequencies, sequence_length, ...]
-        """
+        # [num_batch, sequence_length, num_frequencies*num_channels, ...], while
+        # 'cnn' produces [num_batch, num_channels, num_frequencies,
+        # sequence_length, ...]
         for key in self.targets:
             if self.options['format'] == 'rnn':
                 _shape = output[key].shape
@@ -81,15 +152,12 @@ class BaseDataset(Dataset):
 
         return output
 
-    def toggle_cache(self):
-        self.options['cache'] = not self.options['cache']
-
-    def write_to_cache(self, data_dict, file_name):
-        with open(os.path.join(self.cache_location, file_name), 'wb') as f:
+    def write_to_cache(self, data_dict, filename):
+        with open(os.path.join(self.cache, filename), 'wb') as f:
             pickle.dump(data_dict, f)
 
-    def load_from_cache(self, file_name: str):
-        with open(os.path.join(self.cache_location, file_name), 'rb') as f:
+    def load_from_cache(self, filename: str):
+        with open(os.path.join(self.cache, filename), 'rb') as f:
             data = pickle.load(f)
         return data
 

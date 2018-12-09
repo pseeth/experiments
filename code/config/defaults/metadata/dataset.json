@@ -32,8 +32,7 @@
     "help": "Format for dataset output. 'rnn' produces [num_batch, sequence_length, num_frequencies*num_channels, ...], while 'cnn' produces [num_batch, num_channels, num_frequencies, sequence_length, ...]. The '...' is there because different outputs have different number of trailing dimensions."
   },
   "cache": {
-    "action": "store_true",
-    "help": "Whether or not to cache training data for faster training."
+    "help": "Path to folder for caching training data to speed up training. Pass `None` to avoid using a cache."
   },
   "fraction_of_dataset": {
     "type": "float",

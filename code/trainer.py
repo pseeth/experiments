@@ -148,11 +148,7 @@ class Trainer():
             self.save(validation_loss <= lowest_validation_loss)
 
             progress_bar.update(1)
-            progress_bar.set_description('Loss: {:.4f}'.format(epoch_loss['loss']))
-
-            if self.num_epoch == 0:
-                for key in self.dataloaders:
-                    self.dataloaders[key].dataset.toggle_cache()
+            progress_bar.set_description(f'Loss: {epoch_loss["loss"]:.4f}')
 
     def validate(self, dataloader):
         if not dataloader:
