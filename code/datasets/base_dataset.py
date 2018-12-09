@@ -88,7 +88,7 @@ class BaseDataset(Dataset):
         with open(os.path.join(self.cache_location, file_name), 'wb') as f:
             pickle.dump(data_dict, f)
 
-    def load_from_cache(self, wav_file):
+    def load_from_cache(self, file_name: str):
         with open(os.path.join(self.cache_location, file_name), 'rb') as f:
             data = pickle.load(f)
         return data
