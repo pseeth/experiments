@@ -9,6 +9,7 @@ from nussl import networks
 from enums import *
 import os
 import shutil
+from typing import Optional
 
 OutputTargetMap = {
     'estimates': ['source_spectrograms'],
@@ -39,10 +40,16 @@ class Trainer():
 
         self.dataloaders = {
             'training': self.create_dataloader(train_data),
-            'validation': self.create_dataloader(validation_data)
         }
+        if validation_data:
+            self.dataloaders['validation'] = self.create_dataloader(
+                validation_data
+            )
 
-        self.optimizer, self.scheduler = self.create_optimizer_and_scheduler(self.model, self.options)
+        self.optimizer, self.scheduler = self.create_optimizer_and_scheduler(
+            self.model,
+            self.options
+        )
         self.module = self.model
         if options['data_parallel'] and options['device'] == 'cuda':
             self.model = nn.DataParallel(self.model)
@@ -144,15 +151,26 @@ class Trainer():
         for self.num_epoch in progress_bar:
             epoch_loss = self.run_epoch(self.dataloaders['training'])
             self.log_to_tensorboard(epoch_loss, self.num_epoch, 'epoch')
-            validation_loss = self.validate(self.dataloaders['validation'])
-            self.save(validation_loss <= lowest_validation_loss)
+            validation_loss = self.validate(self.dataloaders.get('validation'))
+            self.save(validation_loss < lowest_validation_loss)
 
             progress_bar.update(1)
             progress_bar.set_description(f'Loss: {epoch_loss["loss"]:.4f}')
 
-    def validate(self, dataloader):
+    def validate(self, dataloader: Optional[DataLoader]) -> float:
+        """Calculate loss on validation set
+
+        Args:
+            dataloader - a dataloader yielding the validation data if there is
+                any, `None` otherwise
+
+        Returns:
+            `np.inf` if there is no validation dataset (`dataloader` is `None`)
+            else the loss over the given validation data
+        """
         if not dataloader:
-            return 0
+            return np.inf
+
         self.model.eval()
         with torch.no_grad():
             validation_loss = self.run_epoch(dataloader)
