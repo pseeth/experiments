@@ -183,7 +183,7 @@ class Trainer():
         prefix = 'best' if best else 'latest'
         optimizer_path = os.path.join(self.checkpoint_folder, f'{prefix}.opt.pth')
         model_path = os.path.join(self.checkpoint_folder, f'{prefix}.model.pth')
-        dataset_options = self.dataloaders['training'].dataset['options']
+        dataset_options = self.dataloaders['training'].dataset.options
         metadata = {
             'n_fft': dataset_options['n_fft'],
             'hop_length': dataset_options['hop_length'],
