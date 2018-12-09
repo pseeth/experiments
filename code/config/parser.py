@@ -1,6 +1,9 @@
 import argparse
 from utils.defaults import load_from_json
 
+# TODO: handle required named arguments, something like this?
+# ref - https://stackoverflow.com/questions/24180527/argparse-required-arguments-listed-under-optional-arguments
+
 def preprocess_metadata(option_name: str, metadata, default=None):
     """Massage data for splatting into `add_argument()`
 
