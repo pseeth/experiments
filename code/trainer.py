@@ -206,7 +206,7 @@ class Trainer():
         self.scheduler.step(validation_loss['loss'])
         return validation_loss['loss']
 
-    def save(self, is_best: bool) -> str:
+    def save(self, is_best: bool, path: str = '') -> str:
         """Saves the model being trained with either `latest` or `best` prefix
         based on validation loss
 
@@ -214,16 +214,24 @@ class Trainer():
             is_best - whether or not the model is known to have improved
                 accuracy from the last epoch (based on validation loss). Always
                 False if no validation data was given.
+            [path] - path to folder in which to save model. If not given, model
+                saved in checkpoint folder
 
         Returns:
             path to saved model
         """
+        if path:
+            os.makedirs(path, exist_ok=True)
+
         prefix = 'best' if is_best else 'latest'
         optimizer_path = os.path.join(
             self.checkpoint_folder,
             f'{prefix}.opt.pth'
         )
-        model_path = os.path.join(self.checkpoint_folder, f'{prefix}.model.pth')
+        model_path = os.path.join(
+             path if path else self.checkpoint_folder,
+            f'{prefix}.model.pth'
+        )
         dataset_options = self.dataloaders['training'].dataset.options
         metadata = {
             key: val
