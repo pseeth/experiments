@@ -215,9 +215,15 @@ class Trainer():
         model_path = os.path.join(self.checkpoint_folder, f'{prefix}.model.pth')
         dataset_options = self.dataloaders['training'].dataset.options
         metadata = {
-            'n_fft': dataset_options['n_fft'],
-            'hop_length': dataset_options['hop_length'],
-            'format': dataset_options['format']
+            key: val
+            for key, val in dataset_options.items()
+            if key in [
+                'n_fft',
+                'hop_length',
+                'format',
+                'sample_rate',
+                'num_channels'
+            ]
         }
 
         optimizer_state = {
