@@ -38,10 +38,10 @@ def train(output_folder, model, dataset, train):
     cpu_count = multiprocessing.cpu_count()
     train['num_workers'] = min(cpu_count, train['num_workers'])
 
-    Dataset_Class = Datasets[dataset['dataset_type'].upper()].value
+    DatasetClass = Datasets[dataset['dataset_type'].upper()].value
 
     train_data = [
-        Dataset_Class(folder, dataset)
+        DatasetClass(folder, dataset)
         for folder
         in train['training_folder']
     ]
@@ -56,7 +56,7 @@ def train(output_folder, model, dataset, train):
         model=model,
         options=train,
         validation_data=(
-            Dataset_Class(train['validation_folder'], dataset)
+            DatasetClass(train['validation_folder'], dataset)
             if train['validation_folder']
             else None
         ),
