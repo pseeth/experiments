@@ -206,7 +206,18 @@ class Trainer():
         self.scheduler.step(validation_loss['loss'])
         return validation_loss['loss']
 
-    def save(self, is_best: bool):
+    def save(self, is_best: bool) -> str:
+        """Saves the model being trained with either `latest` or `best` prefix
+        based on validation loss
+
+        Args:
+            is_best - whether or not the model is known to have improved
+                accuracy from the last epoch (based on validation loss). Always
+                False if no validation data was given.
+
+        Returns:
+            path to saved model
+        """
         prefix = 'best' if is_best else 'latest'
         optimizer_path = os.path.join(
             self.checkpoint_folder,
@@ -233,6 +244,7 @@ class Trainer():
 
         torch.save(optimizer_state, optimizer_path)
         self.module.save(model_path, {'metadata': metadata})
+        return model_path
 
     def resume(self, prefix='best'):
         optimizer_path = os.path.join(self.checkpoint_folder, f'{prefix}.opt.pth')
