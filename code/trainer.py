@@ -30,9 +30,9 @@ class Trainer():
         self.prepare_directories(output_folder)
         self.model = self.build_model(model)
         self.device = torch.device(
-            "cuda"
-            if options['device'] == 'cuda'
-            else "cpu"
+            'cpu'
+            if options['device'] == 'cpu' or not torch.cuda.is_available()
+            else 'cuda'
         )
         self.model = self.model.to(self.device)
 
