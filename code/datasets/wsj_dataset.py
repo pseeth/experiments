@@ -7,7 +7,7 @@ class WSJ(BaseDataset):
         super(WSJ, self).__init__(folder, options)
 
         wav_file = os.path.join(self.folder, 'mix', self.files[0])
-        mix = self.load_audio(wav_file)[0]
+        mix = self._load_audio_file(wav_file)[0]
         self.channels_in_mix = mix.shape[0] if mix.shape[0] < 8 else int(mix.shape[0] / 2)
 
     def get_files(self, folder):
@@ -28,8 +28,8 @@ class WSJ(BaseDataset):
             speaker_path = os.path.join(self.folder, speaker, wav_file)
             mix_path = os.path.join(self.folder, 'mix', wav_file)
 
-            mix, _ = self.load_audio(mix_path)
-            source, _ = self.load_audio(speaker_path)
+            mix, _ = self._load_audio_file(mix_path)
+            source, _ = self._load_audio_file(speaker_path)
 
             mix = mix[channel_indices]
             source = source[channel_indices]

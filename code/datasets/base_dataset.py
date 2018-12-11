@@ -6,7 +6,7 @@ import numpy as np
 import os
 import shutil
 from random import shuffle
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 
 class BaseDataset(Dataset):
     def __init__(self, folder: str, options: Dict[str, Any]):
@@ -60,10 +60,26 @@ class BaseDataset(Dataset):
     def get_files(self, folder):
         raise NotImplementedError()
 
-    def load_audio_files(self, filename):
+    def load_audio_files(
+            self,
+            filename: str
+        ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Loads audio file with given name
+
+        Path to find given filename at determined by implementation by subclass
+
+        Args:
+            filename - name of file to load
+
+        Returns:
+            TODO: flesh this out
+            tuple of mix (np.ndarray? - shape?), sources (np.ndarray? - shape?),
+            assignments? (np.ndarray? - shape?)
+        """
         raise NotImplementedError()
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """Gets number of examples"""
         return len(self.files)
 
     def __getitem__(self, i: int) -> Dict[str, Any]:
@@ -331,7 +347,17 @@ class BaseDataset(Dataset):
         ).astype(np.float32)
 
     @staticmethod
-    def load_audio(file_path):
+    def _load_audio_file(file_path: str) -> Tuple[np.ndarray, int]:
+        """Loads audio file at given path
+
+        TODO: only `.wav` files? if so rename to `_load_wav_file`
+
+        Args:
+            file_path - relative or absolute path to file to load
+
+        Returns:
+            tuple of loaded audio w/ shape ? and sample rate
+        """
         rate, audio = wavfile.read(file_path)
         if len(audio.shape) == 1:
             audio = np.expand_dims(audio, axis=-1)
