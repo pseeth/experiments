@@ -20,59 +20,41 @@ class Scaper(BaseDataset):
                 classes = all_classes
             self.options['source_labels'] = classes
         
-        if len(self.options['group_sources']) > 0 and 'group' not in self.options['source_labels']:
-            self.options['source_labels'].append('group')
-        self.options['source_indices'] = {source_name: i for i, source_name in enumerate(self.options['source_labels'])}
+        for i in range(len(self.options['group_sources'])):
+            self.options['source_labels'].append(f'group{i}')
 
     def get_files(self, folder):
         files = [os.path.join(folder, x) for x in os.listdir(folder) if '.json' in x]
         return files        
 
     def load_audio_files(self, file_name):
-        mix, sr = self.load_audio(file_name[:-4] + 'wav')
+        mix, sr = self._load_audio_file(file_name[:-4] + 'wav')
         jam = jams.load(file_name)
-        data = jam.annotations[0]['data']['value']            
+        data = jam.annotations[0]['data']['value']           
         classes = self.options['source_labels']
-
-        sources = []
-        one_hots = []
-        group = []
-        used_classes = []
-        keep_columns = []
+        source_dict = {}
 
         for d in data:
             if d['role'] == 'foreground':
                 source_path = d['saved_source_file']
                 source_path = os.path.join(self.folder, source_path.split('/')[-1])
-                sources.append(self.load_audio(source_path)[0])
+                source_dict[d['label']] = self._load_audio_file(source_path)[0]
+
+        for i, group in enumerate(self.options['group_sources']):
+            combined = []
+            for label in group:
+                combined.append(source_dict[label])
+                source_dict.pop(label)
+            source_dict[f'group{i}'] = sum(combined)
+
+        sources = []
+        one_hots = []
+
+        for i, label in enumerate(classes):
+            if label in source_dict:
+                sources.append(source_dict[label])
                 one_hot = np.zeros(len(classes))
-                one_hot[self.options['source_indices'][d['label']]] = 1
-                used_classes.append(d['label'])
+                one_hot[classes.index(label)] = 1
                 one_hots.append(one_hot)
-                
-                if d['label'] in self.options['group_sources'] or d['label'] in self.options['ignore_sources']:
-                    group.append(sources[-1])
-                    sources.pop()
-                    one_hots.pop()
-                    used_classes.pop()
-                else:
-                    keep_columns.append(self.options['source_indices'][d['label']])
-
-        if self.options['group_sources']:
-            sources.append(sum(group))
-            one_hot = np.zeros(len(classes))
-            one_hot[self.options['source_indices']['group']] = 1
-            used_classes.append('group')
-            one_hots.append(one_hot)
-            keep_columns.append(self.options['source_indices']['group'])
-
-        source_order = [used_classes.index(c) for c in self.options['source_labels'] if c in used_classes]
-        sources = [sources[i] for i in source_order]
-        one_hots = [one_hots[i] for i in source_order]
-
-        if self.options['group_sources']:
-            one_hots = np.stack(one_hots)[:, sorted(keep_columns)]
-        else:
-            one_hots = np.stack(one_hots)
-
+        one_hots = np.stack(one_hots)
         return mix, sources, one_hots

@@ -283,7 +283,6 @@ class BaseDataset(Dataset):
             log_spectrogram, stft contains the complex spectrogram, and n is the
             original length of the audio signal (used for reconstruction).
         """
-
         n = data.shape[-1]
         data = librosa.util.fix_length(data, n + n_fft // 2, axis=-1)
         stft = np.stack(

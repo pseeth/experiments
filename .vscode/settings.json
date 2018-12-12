@@ -6,5 +6,19 @@
     "python.linting.pylintEnabled": false,
     "python.linting.mypyEnabled": true,
     "python.linting.enabled": true,
-    "python.linting.pydocstylePath": "pydocstyle"
+    "python.linting.pydocstylePath": "pydocstyle",
+    "sync-rsync.exclude": [
+        ".git",
+        ".vscode",
+        "data",
+        "popper",
+        "runs",
+        "__pycache__",
+        "*.pyc",
+        ".ipynb_checkpoints/",
+        ".pth"
+    ],
+    "sync-rsync.remote": "cortex:/home/prem/research/train",
+    "sync-rsync.onSave": true,
+    "sync-rsync.delete": false   
 }

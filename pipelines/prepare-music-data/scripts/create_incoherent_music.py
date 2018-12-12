@@ -21,7 +21,7 @@ def create_scaper_generator(foreground_directory, scene_duration, max_sources, b
     sc.ref_db = -50
     sc.n_channels = 1
     sc.sr = 44100
-    sc.min_silence_duration = None
+    sc.min_silence_duration = .1
 
     n_events = max_sources
 
