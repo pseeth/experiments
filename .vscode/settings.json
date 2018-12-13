@@ -5,10 +5,9 @@
     },
     "python.linting.pylintEnabled": false,
     "python.linting.mypyEnabled": true,
-    "python.linting.enabled": true,
+    "python.linting.enabled": false,
     "python.linting.pydocstylePath": "pydocstyle",
     "sync-rsync.exclude": [
-        ".git",
         ".vscode",
         "data",
         "popper",
@@ -20,5 +19,6 @@
     ],
     "sync-rsync.remote": "cortex:/home/prem/research/train",
     "sync-rsync.onSave": true,
-    "sync-rsync.delete": false   
+    "sync-rsync.delete": false,
+    "python.pythonPath": "/usr/local/bin/python3"
 }
