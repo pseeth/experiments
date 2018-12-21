@@ -143,6 +143,7 @@ class Trainer():
         epoch_loss = 0
         step = 0
         num_batches = len(dataloader)
+        progress_bar = trange(0, num_batches)
         for data in dataloader:
             for key in data:
                 data[key] = data[key].float().to(self.device)
@@ -162,6 +163,8 @@ class Trainer():
                 self.optimizer.zero_grad()
                 loss['total_loss'].backward()
                 self.optimizer.step()
+            progress_bar.update(1)
+            progress_bar.set_description(f"Loss: {loss['total_loss']:.4f}")
             step += 1
         return {'loss': epoch_loss / float(num_batches)}
 

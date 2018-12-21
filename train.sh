@@ -8,7 +8,8 @@ python config/config.py --config_folder $output_folder/config dataset scaper \
                                                 --n_fft 1024 \
                                                 --hop_length 512 \
                                                 --sample_rate 44100 \
-                                                --group_sources bass drums other
+                                                --group_sources bass drums other \
+                                                --cache /media/cache/
 python config/config.py --config_folder $output_folder/config dpcl_recurrent --sample_rate 44100 --num_frequencies 512
 python config/config.py --config_folder $output_folder/config \
                             train   --training_folder /exp/data/generated/musdb/train/ \

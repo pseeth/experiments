@@ -10,3 +10,4 @@ runs
 DOCKER
 .mypy_cache
 *.swp
+*.wav

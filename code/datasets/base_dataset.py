@@ -44,9 +44,11 @@ class BaseDataset(Dataset):
             # TODO: currently assumes `~` (make work for windows eventually?)
             self.cache = os.path.join(
                 os.path.expanduser(self.cache),
+                '_'.join(self.folder.split('/')),
                 self.options['output_type'],
                 '_'.join(self.options['weight_type'])
             )
+            print(f'Caching to: {self.cache}')
             shutil.rmtree(self.cache, ignore_errors=True)
             os.makedirs(self.cache, exist_ok=True)
 
