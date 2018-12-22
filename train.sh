@@ -10,13 +10,18 @@ python config/config.py --config_folder $output_folder/config dataset scaper \
                                                 --sample_rate 44100 \
                                                 --group_sources bass drums other \
                                                 --cache /media/cache/
-python config/config.py --config_folder $output_folder/config dpcl_recurrent --sample_rate 44100 --num_frequencies 512
+python config/config.py --config_folder $output_folder/config dpcl_recurrent \
+                                                --sample_rate 44100 \
+                                                --num_frequencies 512 \
+                                                --num_mels 150 \
+                                                --embedding_activations sigmoid unitnorm
 python config/config.py --config_folder $output_folder/config \
                             train   --training_folder /exp/data/generated/musdb/train/ \
                                     --validation_folder /exp/data/generated/musdb/validation/ \
                                     --loss_function dpcl embedding 1.0 \
-                                    --num_workers 10 \
-                                    --num_epoch 100 
+                                    --num_workers 12 \
+                                    --num_epoch 100 \
+                                    --batch_size 40
 cd /exp
 
 python code/train.py --train $output_folder/config/train.json \

@@ -10,6 +10,13 @@ from enums import *
 import os
 import shutil
 from typing import Optional
+from torch.nn.parallel import DistributedDataParallel
+from itertools import chain
+
+
+# torch.distributed.init_process_group(
+#     backend='nccl', rank=0, world_size=10, init_method=f"file://{os.path.abspath('.')}/distributed_test"
+# )
 
 OutputTargetMap = {
     'estimates': ['source_spectrograms'],
@@ -24,7 +31,7 @@ class Trainer():
         model,
         options,
         validation_data=None,
-        verbose=True,
+        verbose=False,
     ):
         self.verbose = verbose
         self.prepare_directories(output_folder)
@@ -35,6 +42,7 @@ class Trainer():
             else 'cuda'
         )
         self.model = self.model.to(self.device)
+        print(self.model)
 
         self.writer = (
             SummaryWriter(log_dir=self.output_folder)
@@ -50,14 +58,6 @@ class Trainer():
         self.options = options
         self.num_epoch = 0
 
-        self.dataloaders = {
-            'training': self.create_dataloader(train_data),
-        }
-        if validation_data:
-            self.dataloaders['validation'] = self.create_dataloader(
-                validation_data
-            )
-
         self.optimizer, self.scheduler = self.create_optimizer_and_scheduler(
             self.model,
             self.options
@@ -67,6 +67,14 @@ class Trainer():
             self.model = nn.DataParallel(self.model)
             self.module = self.model.module
         self.model.train()
+
+        self.dataloaders = {
+            'training': self.create_dataloader(train_data),
+        }
+        if validation_data:
+            self.dataloaders['validation'] = self.create_dataloader(
+                validation_data
+            )
 
     @staticmethod
     def build_model(model):
@@ -89,6 +97,15 @@ class Trainer():
         if not dataset:
             return None
 
+        input_keys = [[connection[0]] + connection[1] for connection in self.module.connections]
+        input_keys = list(chain.from_iterable(input_keys))
+        input_keys += self.module.output_keys
+
+        output_keys = [OutputTargetMap[k] for k in input_keys if k in OutputTargetMap]
+        output_keys = list(chain.from_iterable(output_keys))
+        
+        dataset.data_keys_for_training = input_keys + output_keys
+
         return DataLoader(
             dataset,
             batch_size=self.options['batch_size'],
@@ -96,6 +113,7 @@ class Trainer():
             sampler=Samplers[
                 self.options['sample_strategy'].upper()
             ].value(dataset),
+            pin_memory=True,
         )
 
     def create_optimizer_and_scheduler(self, model, options):

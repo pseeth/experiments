@@ -32,8 +32,7 @@ class BaseDataset(Dataset):
             'source_spectrograms',
             'weights'
         ]
-        # TODO: handle specifying no value better (maybe map over all options
-        # converting "" to `None`?
+        self.data_keys_for_training = []
         self.cache = (
             self.options['cache']
             if self.options['cache']
@@ -41,7 +40,6 @@ class BaseDataset(Dataset):
         )
 
         if self.cache:
-            # TODO: currently assumes `~` (make work for windows eventually?)
             self.cache = os.path.join(
                 os.path.expanduser(self.cache),
                 '_'.join(self.folder.split('/')),
@@ -121,15 +119,16 @@ class BaseDataset(Dataset):
             one example)
         """
         if self.cache:
-            if i == -1:
-                raise Exception(
-                    '`i` must be a non-negative number when using a cache'
-                )
-
             try:
                 return self.load_from_cache(f'{i:08d}.pth')
             except:
                 output = self._generate_example(filename)
+                if self.data_keys_for_training:
+                    output = {
+                        k: output[k] 
+                        for k in output 
+                        if k in self.data_keys_for_training
+                    }
                 self.write_to_cache(output, f'{i:08d}.pth')
                 return output
         else:

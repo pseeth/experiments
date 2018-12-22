@@ -24,7 +24,7 @@ class Scaper(BaseDataset):
             self.options['source_labels'].append(f'group{i}')
 
     def get_files(self, folder):
-        files = [os.path.join(folder, x) for x in os.listdir(folder) if '.json' in x]
+        files = sorted([os.path.join(folder, x) for x in os.listdir(folder) if '.json' in x])
         return files        
 
     def load_audio_files(self, file_name):

@@ -1,8 +1,9 @@
 def build_dpcl_config(options):
+    options['num_frequencies'] += 1
     options['num_features'] = (
         options['num_mels']
         if options['num_mels'] > 0
-        else options['num_frequencies'] + 1
+        else options['num_frequencies']
     )
 
     return {
