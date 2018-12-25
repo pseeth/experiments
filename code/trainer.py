@@ -24,7 +24,7 @@ OutputTargetMap = {
 }
 
 class Trainer():
-    def __init__(
+    def __init__( 
         self,
         output_folder,
         train_data,
@@ -135,12 +135,14 @@ class Trainer():
     def calculate_loss(self, outputs, targets):
         if self.module.layers['mel_projection'].num_mels > 0:
             if 'assignments' in targets:
-                targets['assignments'] = self.module.project_assignments(
-                    targets['assignments']
+                targets['assignments'] = self.module.project_data(
+                    targets['assignments'],
+                    clamp=True
                 )
             if 'weights' in targets:
-                targets['weights'] = self.module.project_assignments(
-                    targets['weights']
+                targets['weights'] = self.module.project_data(
+                    targets['weights'],
+                    clamp=False
                 )
         loss = {}
         for key in self.loss_keys:
@@ -201,6 +203,11 @@ class Trainer():
             self.log_to_tensorboard(epoch_loss, self.num_epoch, 'epoch')
             validation_loss = self.validate(self.dataloaders.get('validation'))
             self.save(validation_loss < lowest_validation_loss)
+            lowest_validation_loss = (
+                validation_loss 
+                if validation_loss < lowest_validation_loss
+                else lowest_validation_loss
+            )
 
             progress_bar.update(1)
             progress_bar.set_description(f'Loss: {epoch_loss["loss"]:.4f}')

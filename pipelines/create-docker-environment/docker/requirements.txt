@@ -3,7 +3,7 @@ scipy
 musdb
 museval
 librosa
-tqdm
+tqdm==4.19.9
 tensorboardX
 tensorflow
 jams==0.2.2

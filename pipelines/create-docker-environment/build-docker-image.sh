@@ -12,3 +12,4 @@ docker build \
     --build-arg user_id=$UID \
     --build-arg user_name=`whoami` \
     -t local/thesis docker/
+    

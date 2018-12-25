@@ -1,19 +1,19 @@
 #!/bin/sh
 
-output_folder="/exp/pipelines/runs/music/"
+output_folder="/exp/pipelines/runs/music_mel_300/"
 
 cd /exp/code
 
 python config/config.py --config_folder $output_folder/config dataset scaper \
-                                                --n_fft 1024 \
+                                                --n_fft 2048 \
                                                 --hop_length 512 \
                                                 --sample_rate 44100 \
                                                 --group_sources bass drums other \
                                                 --cache /media/cache/
 python config/config.py --config_folder $output_folder/config dpcl_recurrent \
                                                 --sample_rate 44100 \
-                                                --num_frequencies 512 \
-                                                --num_mels 150 \
+                                                --num_frequencies 1024 \
+                                                --num_mels 300 \
                                                 --embedding_activations sigmoid unitnorm
 python config/config.py --config_folder $output_folder/config \
                             train   --training_folder /exp/data/generated/musdb/train/ \
